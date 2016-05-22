@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Waze Edit Count Monitor
 // @namespace    
-// @version      0.1
+// @version      0.2
 // @description  Displays your daily edit count in the WME footer.
 // @author       MapOMatic
 // @include      https://www.waze.com/editor/*
@@ -13,7 +13,8 @@
 (function() {
     'use strict';
 
-    var debug = true;
+    var debug = false;  // Doesn't do anything yet
+	var pollingTime = 4000;  // Time between polling user data (msec)
 
     window.addEventListener('load', function() {
         var userNameElement = getElementsByTagName('H3')[0];
@@ -36,7 +37,7 @@
                         }
                     }
                    });
-            setTimeout(runIt, 3000);
+            setTimeout(runIt, pollingTime);
         }
 
 
