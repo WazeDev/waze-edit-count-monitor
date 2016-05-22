@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Waze Edit Count Monitor
 // @namespace    
-// @version      0.2
+// @version      0.3
 // @description  Displays your daily edit count in the WME footer.
 // @author       MapOMatic
 // @updateURL    https://github.com/mapomatic/waze-edit-count-monitor/raw/master/Waze%20Edit%20Count%20Monitor.user.js
@@ -11,7 +11,36 @@
 // @grant        none
 // ==/UserScript==
 
-(function() {
+function wazeEditCountMonitor_bootstrap()
+{
+	var bGreasemonkeyServiceDefined     = false;
+
+	try
+	{
+		if ("object" === typeof Components.interfaces.gmIGreasemonkeyService)
+		{
+			bGreasemonkeyServiceDefined = true;
+		}
+	}
+	catch (err)
+	{
+		//Ignore.
+	}
+	if ( "undefined" === typeof unsafeWindow  ||  ! bGreasemonkeyServiceDefined)
+	{
+		unsafeWindow    = ( function ()
+		{
+			var dummyElem   = document.createElement('p');
+			dummyElem.setAttribute ('onclick', 'return window;');
+			return dummyElem.onclick ();
+		} ) ();
+	}
+	/* begin running the code! */
+	wazeEditCountMonitor_init();
+}
+
+function wazeEditCountMonitor_init()
+{
     'use strict';
 
     var debug = false;  // Doesn't do anything yet
@@ -80,4 +109,8 @@
             return nodeList;
         }
     }, false);
-})();
+}
+
+// [...]
+// then at the end of your script, call the bootstrap to get things started
+wazeEditCountMonitor_bootstrap();
