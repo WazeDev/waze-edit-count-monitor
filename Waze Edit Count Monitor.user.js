@@ -4,6 +4,7 @@
 // @version      0.2
 // @description  Displays your daily edit count in the WME footer.
 // @author       MapOMatic
+// @updateURL    https://github.com/mapomatic/waze-edit-count-monitor/raw/master/Waze%20Edit%20Count%20Monitor.user.js
 // @include      https://www.waze.com/editor/*
 // @include      https://www.waze.com/*/editor/*
 // @include      https://editor-beta.waze.com/*
