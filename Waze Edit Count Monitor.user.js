@@ -1,116 +1,120 @@
 // ==UserScript==
 // @name         Waze Edit Count Monitor
 // @namespace    
-// @version      0.3
-// @description  Displays your daily edit count in the WME footer.
+// @version      0.4
+// @description  Displays your daily edit count in the WME toolbar.
 // @author       MapOMatic
-// @updateURL    https://github.com/mapomatic/waze-edit-count-monitor/raw/master/Waze%20Edit%20Count%20Monitor.user.js
-// @include      https://www.waze.com/editor/*
-// @include      https://www.waze.com/*/editor/*
-// @include      https://editor-beta.waze.com/*
+// @include      https://editor-beta.waze.com/*editor/*
+// @include      https://www.waze.com/*editor/*
+// @exclude      https://www.waze.com/*user/editor/*
 // @grant        none
 // ==/UserScript==
 
-function wazeEditCountMonitor_bootstrap()
+function wecm_bootstrap()
 {
-	var bGreasemonkeyServiceDefined     = false;
+    var bGreasemonkeyServiceDefined     = false;
 
-	try
-	{
-		if ("object" === typeof Components.interfaces.gmIGreasemonkeyService)
-		{
-			bGreasemonkeyServiceDefined = true;
-		}
-	}
-	catch (err)
-	{
-		//Ignore.
-	}
-	if ( "undefined" === typeof unsafeWindow  ||  ! bGreasemonkeyServiceDefined)
-	{
-		unsafeWindow    = ( function ()
-		{
-			var dummyElem   = document.createElement('p');
-			dummyElem.setAttribute ('onclick', 'return window;');
-			return dummyElem.onclick ();
-		} ) ();
-	}
-	/* begin running the code! */
-	wazeEditCountMonitor_init();
+    try
+    {
+        if ("object" === typeof Components.interfaces.gmIGreasemonkeyService)
+        {
+            bGreasemonkeyServiceDefined = true;
+        }
+    }
+    catch (err)
+    {
+        //Ignore.
+    }
+    if ( "undefined" === typeof unsafeWindow  ||  ! bGreasemonkeyServiceDefined)
+    {
+        unsafeWindow    = ( function ()
+                           {
+            var dummyElem   = document.createElement('p');
+            dummyElem.setAttribute ('onclick', 'return window;');
+            return dummyElem.onclick ();
+        } ) ();
+    }
+    /* begin running the code! */
+    wecm_init();
 }
 
-function wazeEditCountMonitor_init()
-{
+function wecm_init() {
     'use strict';
+	var debug = true;  // Set to true to log debug info to console.
+		
+    var $outputElem = null;
+    var $outputElemContainer = null;
+    var pollingTime = 1000;  // Time between checking for saves (msec).
+    var lastEditCount = null;
+    var lastCanSave = true;
+    var userName = null;
 
-    var debug = false;  // Doesn't do anything yet
-	var pollingTime = 4000;  // Time between polling user data (msec)
+    function getEditCountFromEditorData(data) {
+        var match = data.match(/W.EditorProfile.data\s=\sJSON.parse\(\'(.*)\'\)/i);
+        var editingActivity = JSON.parse(match[1]).editingActivity;
+        var editCount = editingActivity[editingActivity.length-1];
+        return editCount;
+    }
 
-    window.addEventListener('load', function() {
-        var userNameElement = getElementsByTagName('H3')[0];
-        var userName = userNameElement.innerHTML.trim();
-        var outputElement = null;
-        runIt();
+    function updateEditCount(editCount) {
+        logDebug('edit count=' + editCount);
+        lastEditCount = editCount;
+        $outputElem.html('Edits:&nbsp;' + editCount);
+    }
 
-        function runIt() {
-            $.ajax({url: "https://www.waze.com/user/editor/" + userName,
-                    type: "GET",
-                    success: function(data) {
-                        var editCount = getEditCountFromEditorData(data);
-                        if (outputElement === null) {
-                            var footer = getElementsByClassName('WazeMapFooter')[0];
-                            outputElement = document.createTextNode(editCount);
-                            footer.insertBefore(outputElement, footer.firstElementChild);
-                        }
-                        else {
-                            outputElement.nodeValue = editCount;
-                        }
+    function checkForSave() {
+        var canSave = W.model.actionManager.canSave();
+        if (lastCanSave && !canSave) {
+            $.ajax({url: 'https://www.waze.com/user/editor/' + userName,
+                    success: function(data){
+                        updateEditCount(getEditCountFromEditorData(data));
                     }
                    });
-            setTimeout(runIt, pollingTime);
         }
+        lastCanSave = canSave;
+    }
 
+    // This is a hack, because I haven't had time to figure out how to listen for a 'save' event yet.
+    function loopCheck() {
+        checkForSave();
+        setTimeout(function() { loopCheck(); }, pollingTime);
+    }
 
-        function getEditCountFromEditorData(data) {
-            var pattern = /W.EditorProfile.data\s=\sJSON.parse\(\'(.*)\'\)/i;
-            var match = data.match(pattern);
-            var editorProfileData = JSON.parse(match[1]);
-            var editCount = editorProfileData.editingActivity[editorProfileData.editingActivity.length-1];
-            return editCount;
+    function logDebug(value) {
+        if(debug) {
+            console.log('[WECM]: ' + value);
         }
+    }
 
-        function getElementsByClassName (className) {
-            var nodeList = [];
-            function test(node) {
-                if (node.classList){
-                    if (node.classList.contains(className)) {
-                        nodeList.push(node);
-                    }
-                }
-                for (var index = 0; index < node.childNodes.length; index++) {
-                    test(node.childNodes[index]);
-                }
-            }
-            test(document.body);
-            return nodeList;
-        }
+    function showToolTip($elem, timeout) {
+        $elem.tooltip('show');
+        setTimeout(function() {$elem.tooltip('hide');}, timeout);
+    }
 
-        function getElementsByTagName (tagName) {
-            var nodeList = [];
-            function test(node) {
-                if (node.tagName == tagName) {
-                    nodeList.push(node);
-                }
-                for (var index = 0; index < node.childNodes.length; index++) {
-                    test(node.childNodes[index]);
-                }
-            }
-            test(document.body);
-            return nodeList;
-        }
+    // Intentionally using window.addEventListener because $('document').ready() is triggered too soon -- at least in Chrome.
+    window.addEventListener('load', function() {
+        userName = W.loginManager.user.userName;
+        $outputElemContainer = $('<div>', {style:'display: inline; float: right; padding-left: 5px; padding-right: 5px; margin-top: 9px; font-weight: bold; margin-right: 10px; margin-left: 10px; margin-bottom: 8px;font-size: medium;'});
+        $outputElem = $('<a>', {id: 'wecm-count',
+                                href:'javascript:void(null)',
+                                style:'text-decoration:none',
+                                'data-original-title': 'Your daily edit count from your profile.  Click to open your profile.'});
+        //$outputElem.text('&nbsp;');
+        $outputElem.click(function(){window.open('https://www.waze.com/user/editor/' + userName, '_blank');});
+        $outputElemContainer.append($outputElem);
+        $('.waze-icon-place').parent().prepend($outputElemContainer);
+        $outputElem.tooltip({
+            placement: 'auto top',
+            delay: {show: 100, hide: 100},
+            html: true,
+            template: '<div class="tooltip" role="tooltip"><div class="tooltip-arrow"></div><div class="my-tooltip-header"><b></b></div><div class="my-tooltip-body tooltip-inner" style="font-weight: 600; !important"></div></div>'
+        });
+
+        loopCheck();
+        logDebug('loaded');
     }, false);
 }
 
-// [...]
+
 // then at the end of your script, call the bootstrap to get things started
-wazeEditCountMonitor_bootstrap();
+wecm_bootstrap();
