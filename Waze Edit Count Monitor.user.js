@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Waze Edit Count Monitor
 // @namespace    
-// @version      0.7
+// @version      0.8
 // @description  Displays your daily edit count in the WME toolbar.  Warns if you might be throttled.
 // @author       MapOMatic
 // @include      https://editor-beta.waze.com/*editor/*
@@ -12,9 +12,10 @@
 
 (function() {
     var alertUpdate = true;
-    var wecmVersion = "0.7";
+    var wecmVersion = "0.8";
     var wecmChangesHeader = "Waze Edit Count Monitor has been updated.\nv" + wecmVersion + "\n\nWhat's New\n-------------------------";
-    var wecmChanges = wecmChangesHeader + "\n- Fixed bug that was causing WME Toolbox (and other scripts) to crash.";
+    var wecmChanges = wecmChangesHeader + "\n- Added monitoring of UR count to reduce the number of false warnings.";
+    wecmChanges = wecmChangesHeader + "\n- UR count is displayed in the tool tip.";
     var debugLevel = 0;
     var $outputElem = null;
     var $outputElemContainer = null;
@@ -23,6 +24,7 @@
     var lastCanSave = true;
     var userName = null;
     var savesWithoutIncrease = 0;
+    var lastURCount = null;
     var tooltipText = 'Your daily edit count from your profile.  Click to open your profile.';
 
     function log(message, level) {
@@ -36,8 +38,9 @@
         var canRedo = W.model.actionManager.canRedo();
         if (lastCanSave && !canSave && !canRedo) {
             $.ajax({url: 'https://www.waze.com/user/editor/' + userName,
-                    success: function(data){
-                        updateEditCount(getEditCountFromEditorData(data));
+                    success: function(source){
+                        var profile = getEditorProfileFromSource(source);
+                        updateEditCount(getEditCountFromProfile(profile), getURCountFromProfile(profile));
                     }
                    });
         }
@@ -50,20 +53,33 @@
         setTimeout(loopCheck, pollingTime);
     }
 
-    function getEditCountFromEditorData(data) {
-        var match = data.match(/W.EditorProfile.data\s=\sJSON.parse\(\'(.*)\'\)/i);
-        var editingActivity = JSON.parse(match[1]).editingActivity;
-        var editCount = editingActivity[editingActivity.length-1];
-        return editCount;
+    function getEditorProfileFromSource(source) {
+        var match = source.match(/W.EditorProfile.data\s=\s+JSON.parse\('(.*?)'\)/i);
+        return JSON.parse(match[1]);
     }
 
-    function updateEditCount(editCount) {
+    function getEditCountFromProfile(profile) {
+        var editingActivity = profile.editingActivity;
+        return editingActivity[editingActivity.length-1];
+    }
+
+    function getURCountFromProfile(profile) {
+        var editsByType = profile.editsByType;
+        for (i=0; i < editsByType.length; i++) {
+            if (editsByType[i].key == 'mapUpdateRequest') {
+                return editsByType[i].value;
+            }
+        }
+        return -1;
+    }
+
+    function updateEditCount(editCount, urCount) {
         var textColor;
         var bgColor;
         var tooltipTextColor;
 
-        log('edit count = ' + editCount, 1);
-        if (lastEditCount !== editCount) {
+        log('edit count = ' + editCount + ', UR count = ' + urCount, 1);
+        if (lastEditCount !== editCount || lastURCount !== urCount) {
             savesWithoutIncrease = 0;
         } else {
             savesWithoutIncrease += 1;
@@ -87,20 +103,14 @@
                 tooltipTextColor = 'white';
         }
         $outputElemContainer.css('background-color', bgColor);
-        $outputElem.css('color', textColor);
-        $outputElem.html('Edits:&nbsp;' + editCount);
-        var additionalText = (savesWithoutIncrease > 0) ? "<div style='border-radius:8px;padding:3px;margin-top:8px;margin-bottom:5px;color:"+ tooltipTextColor + ";background-color:" + bgColor + "'>" + savesWithoutIncrease + ' consecutive saves without an increase. (Are you throttled?)</div>' : '';
-        $outputElem.attr('data-original-title', tooltipText + additionalText);
-        //if(savesWithoutIncrease === 0 && lastEditCount !== null) {
-            //$outputElem.css('color','#00BB00');
-            //$outputElem.animate({'color':'#59899e'}, 2000);
-        //}
+        $outputElem.css('color', textColor).html('Edits:&nbsp;' + editCount);
+        var urCountText = "<div style='margin-top:8px;padding:3px;'>UR's&nbsp;Closed:&nbsp;" + urCount.count + "&nbsp;&nbsp;(since&nbsp;" + (new Date(urCount.since)).toLocaleDateString() + ")</div>";
+        var warningText = (savesWithoutIncrease > 0) ? "<div style='border-radius:8px;padding:3px;margin-top:8px;margin-bottom:5px;color:"+ tooltipTextColor + ";background-color:" + bgColor + ";'>" + savesWithoutIncrease + ' consecutive saves without an increase. (Are you throttled?)</div>' : '';
+        $outputElem.attr('data-original-title', tooltipText + urCountText + warningText);
         lastEditCount = editCount;
+        lastURCount = urCount;
     }
 
-    function test() {
-        console.log("saved!");
-    }
     function init() {
         'use strict';
 
