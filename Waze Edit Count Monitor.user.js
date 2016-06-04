@@ -15,7 +15,7 @@
     var wecmVersion = "0.8";
     var wecmChangesHeader = "Waze Edit Count Monitor has been updated.\nv" + wecmVersion + "\n\nWhat's New\n-------------------------";
     var wecmChanges = wecmChangesHeader + "\n- Added monitoring of UR count to reduce the number of false warnings.";
-    wecmChanges = wecmChangesHeader + "\n- UR count is displayed in the tool tip.";
+    wecmChanges += wecmChangesHeader + "\n- UR count is displayed in the tool tip.";
     var debugLevel = 0;
     var $outputElem = null;
     var $outputElemContainer = null;
@@ -78,8 +78,8 @@
         var bgColor;
         var tooltipTextColor;
 
-        log('edit count = ' + editCount + ', UR count = ' + urCount, 1);
-        if (lastEditCount !== editCount || lastURCount !== urCount) {
+        log('edit count = ' + editCount + ', UR count = ' + urCount.count, 1);
+        if (lastEditCount !== editCount || lastURCount !== urCount.count) {
             savesWithoutIncrease = 0;
         } else {
             savesWithoutIncrease += 1;
@@ -108,7 +108,7 @@
         var warningText = (savesWithoutIncrease > 0) ? "<div style='border-radius:8px;padding:3px;margin-top:8px;margin-bottom:5px;color:"+ tooltipTextColor + ";background-color:" + bgColor + ";'>" + savesWithoutIncrease + ' consecutive saves without an increase. (Are you throttled?)</div>' : '';
         $outputElem.attr('data-original-title', tooltipText + urCountText + warningText);
         lastEditCount = editCount;
-        lastURCount = urCount;
+        lastURCount = urCount.count;
     }
 
     function init() {
