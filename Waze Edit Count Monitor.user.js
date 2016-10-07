@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Waze Edit Count Monitor (beta)
 // @namespace    
-// @version      0.9.2.b0
+// @version      0.9.2.b1
 // @description  Displays your daily edit count in the WME toolbar.  Warns if you might be throttled.
 // @author       MapOMatic
 // @include      https://beta.waze.com/*editor/*
@@ -12,6 +12,9 @@
 // @connect      www.waze.com
 
 // ==/UserScript==
+
+/* global W */
+/* global GM_info */
 
 function WECM_Injected() {
     var debugLevel = 0;
@@ -168,7 +171,7 @@ function WECM_Injected() {
     function getURCountFromProfile(profile) {
         var editsByType = profile.editsByType;
         for (i=0; i < editsByType.length; i++) {
-            if (editsByType[i].key == 'mapUpdateRequest') {
+            if (editsByType[i].key === 'mapUpdateRequest') {
                 return editsByType[i].value;
             }
         }
