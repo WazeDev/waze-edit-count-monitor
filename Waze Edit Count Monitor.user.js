@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Waze Edit Count Monitor (beta)
 // @namespace    
-// @version      0.9.2.b1
+// @version      0.9.3.b1
 // @description  Displays your daily edit count in the WME toolbar.  Warns if you might be throttled.
 // @author       MapOMatic
 // @include      https://beta.waze.com/*editor/*
@@ -114,7 +114,7 @@ function WECM_Injected() {
                                 style:'text-decoration:none',
                                 'data-original-title': tooltipText});
         $outputElemContainer.append($outputElem);
-        $('.waze-icon-place').parent().prepend($outputElemContainer);
+        $('.toolbar-button.waze-icon-place').parent().prepend($outputElemContainer);
         $outputElem.tooltip({
             placement: 'auto top',
             delay: {show: 100, hide: 100},
