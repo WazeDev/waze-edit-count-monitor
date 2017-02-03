@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Waze Edit Count Monitor (beta)
+// @name         Waze Edit Count Monitor
 // @namespace    
-// @version      0.9.3.b1
+// @version      0.9.3
 // @description  Displays your daily edit count in the WME toolbar.  Warns if you might be throttled.
 // @author       MapOMatic
 // @include      https://beta.waze.com/*editor/*
