@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Waze Edit Count Monitor
 // @namespace    
-// @version      0.9.3
+// @version      0.9.4
 // @description  Displays your daily edit count in the WME toolbar.  Warns if you might be throttled.
 // @author       MapOMatic
 // @include      https://beta.waze.com/*editor/*
@@ -79,7 +79,7 @@ function WECM_Injected() {
                 tooltipTextColor = 'white';
         }
         $outputElemContainer.css('background-color', bgColor);
-        $outputElem.css('color', textColor).html('Edits:&nbsp;' + editCount);
+        $outputElem.css('color', textColor).html('&nbsp;' + editCount);
         var urCountText = "<div style='margin-top:8px;padding:3px;'>UR's&nbsp;Closed:&nbsp;" + urCount.count + "&nbsp;&nbsp;(since&nbsp;" + (new Date(urCount.since)).toLocaleDateString() + ")</div>";
         var warningText = (savesWithoutIncrease > 0) ? "<div style='border-radius:8px;padding:3px;margin-top:8px;margin-bottom:5px;color:"+ tooltipTextColor + ";background-color:" + bgColor + ";'>" + savesWithoutIncrease + ' consecutive saves without an increase. (Are you throttled?)</div>' : '';
         $outputElem.attr('data-original-title', tooltipText + urCountText + warningText);
