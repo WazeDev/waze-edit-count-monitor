@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Waze Edit Count Monitor (beta)
-// @namespace    
-// @version      0.9.4.b1
+// @namespace    https://greasyfork.org/en/users/45389-mapomatic
+// @version      0.9.6
 // @description  Displays your daily edit count in the WME toolbar.  Warns if you might be throttled.
 // @author       MapOMatic
 // @include      https://beta.waze.com/*editor/*
@@ -16,11 +16,12 @@
 /* global W */
 /* global GM_info */
 
+// This function is injected into the page to allow it to run in the page's context.
 function WECM_Injected() {
     var debugLevel = 0;
     var $outputElem = null;
     var $outputElemContainer = null;
-    var pollingTime = 1000;  // Time between checking for saves (msec).
+    var pollingTime = 250;  // Time between checking for saves (msec).
     var lastEditCount = null;
     var lastCanSave = true;
     var userName = null;
@@ -107,7 +108,7 @@ function WECM_Injected() {
         'use strict';
 
         userName = W.loginManager.user.userName;
-        $outputElemContainer = $('<div>', {style:'border-radius: 23px; height: 23px; display: inline; float: right; padding-left: 10px; padding-right: 10px; margin: 9px 5px 8px 5px; font-weight: bold; font-size: medium;'});
+        $outputElemContainer = $('<div>', {style:'position:relative; border-radius:23px; height:23px; display:inline; float:right; padding-left:10px; padding-right: 0px; margin:9px 5px 8px 5px; font-weight:bold; font-size:medium;'});
         $outputElem = $('<a>', {id: 'wecm-count',
                                 href:'https://www.waze.com/user/editor/' + userName.toLowerCase(),
                                 target: "_blank",
@@ -119,7 +120,7 @@ function WECM_Injected() {
             placement: 'auto top',
             delay: {show: 100, hide: 100},
             html: true,
-            template: '<div class="tooltip" role="tooltip" style="opacity:0.95"><div class="tooltip-arrow"></div><div class="my-tooltip-header"><b></b></div><div class="my-tooltip-body tooltip-inner" style="font-weight: 600; !important"></div></div>'
+            template: '<div class="tooltip" role="tooltip" style="opacity:0.95"><div class="tooltip-arrow"></div><div class="my-tooltip-header"><b></b></div><div class="my-tooltip-body tooltip-inner" style="font-weight:600; !important"></div></div>'
         });
 
         window.addEventListener('message', receiveMessage);
@@ -153,7 +154,7 @@ function WECM_Injected() {
 
 /* Code that is NOT injected into the page */
 (function(){
-    var alertUpdate = true;
+    var alertUpdate = false;
     var wecmVersion = GM_info.script.version;
     var wecmChangesHeader = "Waze Edit Count Monitor has been updated.\nv" + wecmVersion + "\n\nWhat's New\n-------------------------";
     var wecmChanges = wecmChangesHeader + "\n- Should now work in FF Greasemonkey and in WME beta.";
