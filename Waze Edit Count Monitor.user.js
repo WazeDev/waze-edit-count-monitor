@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Waze Edit Count Monitor (beta)
 // @namespace    https://greasyfork.org/en/users/45389-mapomatic
-// @version      0.9.6
+// @version      0.9.7
 // @description  Displays your daily edit count in the WME toolbar.  Warns if you might be throttled.
 // @author       MapOMatic
 // @include      https://beta.waze.com/*editor/*
@@ -108,7 +108,7 @@ function WECM_Injected() {
         'use strict';
 
         userName = W.loginManager.user.userName;
-        $outputElemContainer = $('<div>', {style:'position:relative; border-radius:23px; height:23px; display:inline; float:right; padding-left:10px; padding-right: 0px; margin:9px 5px 8px 5px; font-weight:bold; font-size:medium;'});
+        $outputElemContainer = $('<div>', {style:'position:relative; border-radius:23px; height:23px; display:inline; float:right; padding-left:10px; padding-right:10px; margin:9px 5px 8px 5px; font-weight:bold; font-size:medium;'});
         $outputElem = $('<a>', {id: 'wecm-count',
                                 href:'https://www.waze.com/user/editor/' + userName.toLowerCase(),
                                 target: "_blank",
