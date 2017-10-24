@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Waze Edit Count Monitor
 // @namespace    https://greasyfork.org/en/users/45389-mapomatic
-// @version      0.9.8
+// @version      2017.10.24.001
 // @description  Displays your daily edit count in the WME toolbar.  Warns if you might be throttled.
 // @author       MapOMatic
 // @include      /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
@@ -63,12 +63,12 @@ function WECM_Injected() {
         switch (savesWithoutIncrease) {
             case 0:
             case 1:
-                textColor = '';
+                textColor = '#354148';
                 bgColor = '';
                 tooltipTextColor = 'white';
                 break;
             case 2:
-                textColor = '';
+                textColor = '#354148';
                 bgColor = 'yellow';
                 tooltipTextColor = 'black';
                 break;
@@ -78,7 +78,7 @@ function WECM_Injected() {
                 tooltipTextColor = 'white';
         }
         $outputElemContainer.css('background-color', bgColor);
-        $outputElem.css('color', textColor).html('&nbsp;' + editCount);
+        $outputElem.css('color', textColor).html(editCount);
         var urCountText = "<div style='margin-top:8px;padding:3px;'>UR's&nbsp;Closed:&nbsp;" + urCount.count + "&nbsp;&nbsp;(since&nbsp;" + (new Date(urCount.since)).toLocaleDateString() + ")</div>";
         var warningText = (savesWithoutIncrease > 0) ? "<div style='border-radius:8px;padding:3px;margin-top:8px;margin-bottom:5px;color:"+ tooltipTextColor + ";background-color:" + bgColor + ";'>" + savesWithoutIncrease + ' consecutive saves without an increase. (Are you throttled?)</div>' : '';
         $outputElem.attr('data-original-title', tooltipText + urCountText + warningText);
@@ -106,14 +106,14 @@ function WECM_Injected() {
         'use strict';
 
         userName = W.loginManager.user.userName;
-        $outputElemContainer = $('<div>', {style:'position:relative; border-radius:23px; height:23px; display:inline; float:right; padding-left:10px; padding-right:10px; margin:9px 5px 8px 5px; font-weight:bold; font-size:medium;'});
+        $outputElemContainer = $('<div>', {style:'position:relative; border-radius:23px; text-color:#354148; height:24px; padding-top:1px; padding-left:10px; padding-right:10px; display:block; float:right; margin-top:11px; font-weight:bold; font-size:medium;'});  //margin:9px 5px 8px 5px;  display:inline;
         $outputElem = $('<a>', {id: 'wecm-count',
                                 href:'https://www.waze.com/user/editor/' + userName.toLowerCase(),
                                 target: "_blank",
                                 style:'text-decoration:none',
                                 'data-original-title': tooltipText});
         $outputElemContainer.append($outputElem);
-        $('.toolbar-button.waze-icon-place').parent().prepend($outputElemContainer);
+        $('#edit-buttons').children().first().append($outputElemContainer);
         $outputElem.tooltip({
             placement: 'auto top',
             delay: {show: 100, hide: 100},
