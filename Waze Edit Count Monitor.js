@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Waze Edit Count Monitor (beta)
 // @namespace    https://greasyfork.org/en/users/45389-mapomatic
-// @version      2017.10.24.001
+// @version      2017.10.25.001
 // @description  Displays your daily edit count in the WME toolbar.  Warns if you might be throttled.
 // @author       MapOMatic
 // @include      /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
@@ -44,20 +44,21 @@ function WECM_Injected() {
 
     // This is a hack, because I haven't had time to figure out how to listen for a 'save' event yet.
     function loopCheck() {
+        addDiv();
         checkForSave();
         setTimeout(loopCheck, pollingTime);
     }
 
-    function updateEditCount(editCount, urCount) {
+    function updateEditCount(editCount, urCount, noIncrement) {
         var textColor;
         var bgColor;
         var tooltipTextColor;
 
         log('edit count = ' + editCount + ', UR count = ' + urCount.count, 1);
-        if (lastEditCount !== editCount || lastURCount !== urCount.count) {
+        if (lastEditCount !== editCount || lastURCount.count !== urCount.count) {
             savesWithoutIncrease = 0;
         } else {
-            savesWithoutIncrease += 1;
+            if (!noIncrement) savesWithoutIncrease += 1;
         }
 
         switch (savesWithoutIncrease) {
@@ -83,7 +84,7 @@ function WECM_Injected() {
         var warningText = (savesWithoutIncrease > 0) ? "<div style='border-radius:8px;padding:3px;margin-top:8px;margin-bottom:5px;color:"+ tooltipTextColor + ";background-color:" + bgColor + ";'>" + savesWithoutIncrease + ' consecutive saves without an increase. (Are you throttled?)</div>' : '';
         $outputElem.attr('data-original-title', tooltipText + urCountText + warningText);
         lastEditCount = editCount;
-        lastURCount = urCount.count;
+        lastURCount = urCount;
     }
 
     function receiveMessage(event) {
@@ -102,29 +103,32 @@ function WECM_Injected() {
         }
     }
 
+    function addDiv() {
+        if ($('#wecm-count').length === 0) {
+            $outputElemContainer = $('<div>', {style:'position:relative; border-radius:23px; text-color:#354148; height:24px; padding-top:1px; padding-left:10px; padding-right:10px; display:block; float:right; margin-top:11px; font-weight:bold; font-size:medium;'});  //margin:9px 5px 8px 5px;  display:inline;
+            $outputElem = $('<a>', {id: 'wecm-count',
+                                    href:'https://www.waze.com/user/editor/' + userName.toLowerCase(),
+                                    target: "_blank",
+                                    style:'text-decoration:none',
+                                    'data-original-title': tooltipText});
+            $outputElemContainer.append($outputElem);
+            $('#edit-buttons').children().first().append($outputElemContainer);
+            $outputElem.tooltip({
+                placement: 'auto top',
+                delay: {show: 100, hide: 100},
+                html: true,
+                template: '<div class="tooltip" role="tooltip" style="opacity:0.95"><div class="tooltip-arrow"></div><div class="my-tooltip-header"><b></b></div><div class="my-tooltip-body tooltip-inner" style="font-weight:600; !important"></div></div>'
+            });
+            if (lastEditCount !== null && lastURCount !== null ) {
+                updateEditCount(lastEditCount, lastURCount, true);
+            }
+        }
+    }
+
     function init() {
-        'use strict';
-
         userName = W.loginManager.user.userName;
-        $outputElemContainer = $('<div>', {style:'position:relative; border-radius:23px; text-color:#354148; height:24px; padding-top:1px; padding-left:10px; padding-right:10px; display:block; float:right; margin-top:11px; font-weight:bold; font-size:medium;'});  //margin:9px 5px 8px 5px;  display:inline;
-        $outputElem = $('<a>', {id: 'wecm-count',
-                                href:'https://www.waze.com/user/editor/' + userName.toLowerCase(),
-                                target: "_blank",
-                                style:'text-decoration:none',
-                                'data-original-title': tooltipText});
-        $outputElemContainer.append($outputElem);
-        $('#edit-buttons').children().first().append($outputElemContainer);
-        $outputElem.tooltip({
-            placement: 'auto top',
-            delay: {show: 100, hide: 100},
-            html: true,
-            template: '<div class="tooltip" role="tooltip" style="opacity:0.95"><div class="tooltip-arrow"></div><div class="my-tooltip-header"><b></b></div><div class="my-tooltip-body tooltip-inner" style="font-weight:600; !important"></div></div>'
-        });
-
         window.addEventListener('message', receiveMessage);
-
         loopCheck();
-
         log('Initialized.',0);
     }
 
@@ -152,6 +156,8 @@ function WECM_Injected() {
 
 /* Code that is NOT injected into the page */
 (function(){
+    'use strict';
+
     var alertUpdate = false;
     var wecmVersion = GM_info.script.version;
     var wecmChangesHeader = "Waze Edit Count Monitor has been updated.\nv" + wecmVersion + "\n\nWhat's New\n-------------------------";
@@ -169,7 +175,7 @@ function WECM_Injected() {
 
     function getURCountFromProfile(profile) {
         var editsByType = profile.editsByType;
-        for (i=0; i < editsByType.length; i++) {
+        for (var i=0; i < editsByType.length; i++) {
             if (editsByType[i].key === 'mapUpdateRequest') {
                 return editsByType[i].value;
             }
