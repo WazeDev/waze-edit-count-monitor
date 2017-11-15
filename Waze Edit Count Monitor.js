@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Waze Edit Count Monitor (beta)
 // @namespace    https://greasyfork.org/en/users/45389-mapomatic
-// @version      2017.10.25.001
+// @version      2017.11.15.001
 // @description  Displays your daily edit count in the WME toolbar.  Warns if you might be throttled.
 // @author       MapOMatic
 // @include      /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
@@ -164,7 +164,7 @@ function WECM_Injected() {
     var wecmChanges = wecmChangesHeader + "\n- Should now work in FF Greasemonkey and in WME beta.";
 
     function getEditorProfileFromSource(source) {
-        var match = source.match(/W.EditorProfile.data\s=\s+JSON.parse\('(.*?)'\)/i);
+        var match = source.match(/gon.data=({.*?});gon.env=/i);
         return JSON.parse(match[1]);
     }
 
