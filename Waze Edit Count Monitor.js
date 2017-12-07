@@ -1,11 +1,12 @@
 // ==UserScript==
 // @name         Waze Edit Count Monitor (beta)
 // @namespace    https://greasyfork.org/en/users/45389-mapomatic
-// @version      2017.11.15.001
+// @version      2017.12.07.001
 // @description  Displays your daily edit count in the WME toolbar.  Warns if you might be throttled.
 // @author       MapOMatic
 // @include      /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
 // @require      https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js
+// @license      GNU GPLv3
 // @grant        GM_xmlhttpRequest
 // @connect      www.waze.com
 
@@ -16,12 +17,11 @@
 
 // This function is injected into the page to allow it to run in the page's context.
 function WECM_Injected() {
+    "use strict";
     var debugLevel = 0;
     var $outputElem = null;
     var $outputElemContainer = null;
-    var pollingTime = 250;  // Time between checking for saves (msec).
     var lastEditCount = null;
-    var lastCanSave = true;
     var userName = null;
     var savesWithoutIncrease = 0;
     var lastURCount = null;
@@ -33,26 +33,32 @@ function WECM_Injected() {
         }
     }
 
-    function checkForSave() {
-        var canSave = W.model.actionManager.canSave();
-        var canRedo = W.model.actionManager.canRedo();
-        if (lastCanSave && !canSave && !canRedo) {
-            window.postMessage(JSON.stringify(['wecmGetCounts',userName]),'*');
-        }
-        lastCanSave = canSave;
-    }
-
-    // This is a hack, because I haven't had time to figure out how to listen for a 'save' event yet.
-    function loopCheck() {
-        addDiv();
-        checkForSave();
-        setTimeout(loopCheck, pollingTime);
+    function checkEditCount() {
+        window.postMessage(JSON.stringify(['wecmGetCounts',userName]),'*');
     }
 
     function updateEditCount(editCount, urCount, noIncrement) {
         var textColor;
         var bgColor;
         var tooltipTextColor;
+
+        // Add the counter div if it doesn't exist.
+        if ($('#wecm-count').length === 0) {
+            $outputElemContainer = $('<div>', {style:'position:relative; border-radius:23px; text-color:#354148; height:24px; padding-top:1px; padding-left:10px; padding-right:10px; display:block; float:right; margin-top:11px; font-weight:bold; font-size:medium;'});  //margin:9px 5px 8px 5px;  display:inline;
+            $outputElem = $('<a>', {id: 'wecm-count',
+                                    href:'https://www.waze.com/user/editor/' + userName.toLowerCase(),
+                                    target: "_blank",
+                                    style:'text-decoration:none',
+                                    'data-original-title': tooltipText});
+            $outputElemContainer.append($outputElem);
+            $('#edit-buttons').children().first().append($outputElemContainer);
+            $outputElem.tooltip({
+                placement: 'auto top',
+                delay: {show: 100, hide: 100},
+                html: true,
+                template: '<div class="tooltip" role="tooltip" style="opacity:0.95"><div class="tooltip-arrow"></div><div class="my-tooltip-header"><b></b></div><div class="my-tooltip-body tooltip-inner" style="font-weight:600; !important"></div></div>'
+            });
+        }
 
         log('edit count = ' + editCount + ', UR count = ' + urCount.count, 1);
         if (lastEditCount !== editCount || lastURCount.count !== urCount.count) {
@@ -91,8 +97,7 @@ function WECM_Injected() {
         var msg;
         try {
             msg = JSON.parse(event.data);
-        }
-        catch (err) {
+        } catch (err) {
             // Do nothing
         }
 
@@ -103,37 +108,18 @@ function WECM_Injected() {
         }
     }
 
-    function addDiv() {
-        if ($('#wecm-count').length === 0) {
-            $outputElemContainer = $('<div>', {style:'position:relative; border-radius:23px; text-color:#354148; height:24px; padding-top:1px; padding-left:10px; padding-right:10px; display:block; float:right; margin-top:11px; font-weight:bold; font-size:medium;'});  //margin:9px 5px 8px 5px;  display:inline;
-            $outputElem = $('<a>', {id: 'wecm-count',
-                                    href:'https://www.waze.com/user/editor/' + userName.toLowerCase(),
-                                    target: "_blank",
-                                    style:'text-decoration:none',
-                                    'data-original-title': tooltipText});
-            $outputElemContainer.append($outputElem);
-            $('#edit-buttons').children().first().append($outputElemContainer);
-            $outputElem.tooltip({
-                placement: 'auto top',
-                delay: {show: 100, hide: 100},
-                html: true,
-                template: '<div class="tooltip" role="tooltip" style="opacity:0.95"><div class="tooltip-arrow"></div><div class="my-tooltip-header"><b></b></div><div class="my-tooltip-body tooltip-inner" style="font-weight:600; !important"></div></div>'
-            });
-            if (lastEditCount !== null && lastURCount !== null ) {
-                updateEditCount(lastEditCount, lastURCount, true);
-            }
-        }
-    }
-
     function init() {
         userName = W.loginManager.user.userName;
+        // Listen for events from sandboxed code.
         window.addEventListener('message', receiveMessage);
-        loopCheck();
+        // Listen for Save events.
+        W.model.actionManager.events.register('afterclearactions', null, function(){ checkEditCount(); });
+        // Update the edit count first time.
+        checkEditCount();
         log('Initialized.',0);
     }
 
-    function bootstrap()
-    {
+    function bootstrap() {
         if (W &&
             W.loginManager &&
             W.loginManager.events &&
@@ -183,14 +169,14 @@ function WECM_Injected() {
         return -1;
     }
 
-    // Listen for a message from the page.
+    // Handle messages from the page.
     function receiveMessage(event) {
         var msg;
         try {
             msg = JSON.parse(event.data);
         }
         catch (err) {
-            // Do nothing
+            // Ignore errors
         }
 
         if (msg && msg[0] === "wecmGetCounts") {
@@ -208,17 +194,17 @@ function WECM_Injected() {
 
     $(document).ready(function() {
         /* Check version and alert on update */
-        if (alertUpdate && ('undefined' === window.localStorage.wecmVersion ||
-                            wecmVersion !== window.localStorage.wecmVersion)) {
+        if (alertUpdate && (!window.localStorage.wecmVersion || wecmVersion !== window.localStorage.wecmVersion)) {
             alert(wecmChanges);
             window.localStorage.wecmVersion = wecmVersion;
         }
     });
 
-    var WECM_Injected_script = document.createElement("script");
-    WECM_Injected_script.textContent = "" + WECM_Injected.toString() + " \n" + "WECM_Injected();";
-    WECM_Injected_script.setAttribute("type", "application/javascript");
-    document.body.appendChild(WECM_Injected_script);
-    window.addEventListener('message', receiveMessage);
+    // Inject the page script.
+    $('head').append(
+        $('<script>', {type:'application/javascript'}).html('(' + WECM_Injected.toString() + ')();')
+    );
 
+    // Listen for events coming from the page script.
+    window.addEventListener('message', receiveMessage);
 })();
