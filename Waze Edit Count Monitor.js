@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Waze Edit Count Monitor
+// @name         Waze Edit Count Monitor (beta)
 // @namespace    https://greasyfork.org/en/users/45389-mapomatic
 // @version      2017.12.09.001
 // @description  Displays your daily edit count in the WME toolbar.  Warns if you might be throttled.
