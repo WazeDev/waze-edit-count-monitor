@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Waze Edit Count Monitor
 // @namespace    https://greasyfork.org/en/users/45389-mapomatic
-// @version      2017.12.07.001
+// @version      2017.12.09.001
 // @description  Displays your daily edit count in the WME toolbar.  Warns if you might be throttled.
 // @author       MapOMatic
 // @include      /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
@@ -140,14 +140,10 @@ function WECM_Injected() {
 }
 
 
-/* Code that is NOT injected into the page */
+// Code that is NOT injected into the page.
+// Note that jQuery may or may not be available, so don't rely on it in this part of the script.
 (function(){
     'use strict';
-
-    var alertUpdate = false;
-    var wecmVersion = GM_info.script.version;
-    var wecmChangesHeader = "Waze Edit Count Monitor has been updated.\nv" + wecmVersion + "\n\nWhat's New\n-------------------------";
-    var wecmChanges = wecmChangesHeader + "\n- Should now work in FF Greasemonkey and in WME beta.";
 
     function getEditorProfileFromSource(source) {
         var match = source.match(/gon.data=({.*?});gon.env=/i);
@@ -192,18 +188,11 @@ function WECM_Injected() {
         }
     }
 
-    $(document).ready(function() {
-        /* Check version and alert on update */
-        if (alertUpdate && (!window.localStorage.wecmVersion || wecmVersion !== window.localStorage.wecmVersion)) {
-            alert(wecmChanges);
-            window.localStorage.wecmVersion = wecmVersion;
-        }
-    });
-
-    // Inject the page script.
-    $('head').append(
-        $('<script>', {type:'application/javascript'}).html('(' + WECM_Injected.toString() + ')();')
-    );
+    var WECM_Injected_script = document.createElement("script");
+    WECM_Injected_script.textContent = "" + WECM_Injected.toString() + " \n" + "WECM_Injected();";
+    WECM_Injected_script.setAttribute("type", "application/javascript");
+    document.body.appendChild(WECM_Injected_script);
+    window.addEventListener('message', receiveMessage);
 
     // Listen for events coming from the page script.
     window.addEventListener('message', receiveMessage);
