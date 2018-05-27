@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Waze Edit Count Monitor
 // @namespace    https://greasyfork.org/en/users/45389-mapomatic
-// @version      2018.04.11.001
+// @version      2018.05.27.001
 // @description  Displays your daily edit count in the WME toolbar.  Warns if you might be throttled.
 // @author       MapOMatic
 // @include      /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
@@ -14,10 +14,19 @@
 
 /* global W */
 /* global GM_info */
+/* global toastr */
 
 // This function is injected into the page to allow it to run in the page's context.
 function WECM_Injected() {
     "use strict";
+
+    let _toastrSettings = {
+        remindAtEditCount: 100,
+        warnAtEditCount: 150,
+        wasReminded: false,
+        wasWarned: false
+    };
+
     var debugLevel = 0;
     var $outputElem = null;
     var $outputElemContainer = null;
@@ -35,6 +44,19 @@ function WECM_Injected() {
 
     function checkEditCount() {
         window.postMessage(JSON.stringify(['wecmGetCounts',userName]),'*');
+        _toastrSettings.wasReminded = false;
+        _toastrSettings.wasWarned = false;
+        toastr.remove();
+    }
+
+    function getChangedObjectCount() {
+        let count = 0;
+        let changed = W.model.getModifiedObjects();
+        Object.keys(changed).forEach(key => {
+            let obj = changed[key];
+            count += obj.Insert.length + obj.Update.length + obj.Delete.length;
+        });
+        return count;
     }
 
     function updateEditCount(editCount, urCount, noIncrement) {
@@ -108,15 +130,58 @@ function WECM_Injected() {
         }
     }
 
+    function checkChangedObjectCount() {
+        let objectEditCount = getChangedObjectCount();
+        if (objectEditCount >= _toastrSettings.warnAtEditCount && !_toastrSettings.wasWarned) {
+            toastr.remove();
+            toastr.warning('You have edited at least ' + _toastrSettings.warnAtEditCount + ' objects. You should consider saving soon. ' +
+                           'If you get an error while saving, you may need to undo some actions and try again.', 'Reminder from Edit Count Monitor:');
+            _toastrSettings.wasWarned = true;
+            //_toastrSettings.wasReminded = true;
+        } else if (objectEditCount >= _toastrSettings.remindAtEditCount && !_toastrSettings.wasReminded) {
+            toastr.remove();
+            toastr.info('You have edited at least ' + _toastrSettings.remindAtEditCount + ' objects. You should consider saving soon.', 'Reminder from Edit Count Monitor:');
+            _toastrSettings.wasReminded = true;
+        } else if (objectEditCount < _toastrSettings.remindAtEditCount) {
+            _toastrSettings.wasWarned = false;
+            _toastrSettings.wasReminded = false;
+            toastr.remove();
+        }
+    }
+
     function init() {
         userName = W.loginManager.user.userName;
         // Listen for events from sandboxed code.
         window.addEventListener('message', receiveMessage);
         // Listen for Save events.
-        W.model.actionManager.events.register('afterclearactions', null, function(){ checkEditCount(); });
-        // Update the edit count first time.
-        checkEditCount();
-        log('Initialized.',0);
+
+        $('head').append(
+            $('<link/>', {
+                rel: 'stylesheet',
+                type: 'text/css',
+                href: 'https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/toastr.min.css'
+            }),
+            $('<style type="text/css">#toast-container {position: absolute;} #toast-container > div {opacity: 0.95;} .toast-top-center {top: 30px;}</style>')
+        );
+        $.getScript('https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/toastr.min.js', function() {
+            toastr.options = {
+                target:'#map',
+                timeOut: 9999999999,
+                positionClass: 'toast-top-right',
+                closeOnHover: false,
+                closeDuration: 0,
+                showDuration: 0,
+                closeButton: true
+                //preventDuplicates: true
+            };
+            W.model.actionManager.events.register('afterclearactions', null, checkEditCount);
+            W.model.actionManager.events.register('afteraction', null, checkChangedObjectCount);
+            W.model.actionManager.events.register('afterundoaction', null, checkChangedObjectCount);
+
+            // Update the edit count first time.
+            checkEditCount();
+            log('Initialized.',0);
+        });
     }
 
     function bootstrap() {
