@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Waze Edit Count Monitor
 // @namespace    https://greasyfork.org/en/users/45389-mapomatic
-// @version      2018.05.27.001
+// @version      2018.07.03.001
 // @description  Displays your daily edit count in the WME toolbar.  Warns if you might be throttled.
 // @author       MapOMatic
 // @include      /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
@@ -51,7 +51,7 @@ function WECM_Injected() {
 
     function getChangedObjectCount() {
         let count = 0;
-        let changed = W.model.getModifiedObjects();
+        let changed = W.model._getModifiedObjects();
         Object.keys(changed).forEach(key => {
             let obj = changed[key];
             count += obj.Insert.length + obj.Update.length + obj.Delete.length;
