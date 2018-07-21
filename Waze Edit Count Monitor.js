@@ -7,7 +7,7 @@
 // @include      /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
 // @require      https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js
 // @license      GNU GPLv3
-// @contributionURL https://ko-fi.com/V7V4GQVS
+// @contributionURL https://ko-fi.com/mapomatic
 // @grant        GM_xmlhttpRequest
 // @connect      www.waze.com
 
