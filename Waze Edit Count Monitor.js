@@ -1,15 +1,15 @@
 // ==UserScript==
-// @name         Waze Edit Count Monitor
-// @namespace    https://greasyfork.org/en/users/45389-mapomatic
-// @version      2018.07.21.001
-// @description  Displays your daily edit count in the WME toolbar.  Warns if you might be throttled.
-// @author       MapOMatic
-// @include      /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
-// @require      https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js
-// @license      GNU GPLv3
-// @contributionURL https://ko-fi.com/mapomatic
-// @grant        GM_xmlhttpRequest
-// @connect      www.waze.com
+// @name            Waze Edit Count Monitor
+// @namespace       https://greasyfork.org/en/users/45389-mapomatic
+// @version         2018.07.21.002
+// @description     Displays your daily edit count in the WME toolbar.  Warns if you might be throttled.
+// @author          MapOMatic
+// @include         /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
+// @require         https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js
+// @license         GNU GPLv3
+// @contributionURL https://github.com/WazeDev/Thank-The-Authors
+// @grant           GM_xmlhttpRequest
+// @connect         www.waze.com
 
 // ==/UserScript==
 
@@ -19,7 +19,7 @@
 
 // This function is injected into the page to allow it to run in the page's context.
 function WECM_Injected() {
-    "use strict";
+    'use strict';
 
     let _toastrSettings = {
         remindAtEditCount: 100,
@@ -70,7 +70,7 @@ function WECM_Injected() {
             $outputElemContainer = $('<div>', {style:'position:relative; border-radius:23px; text-color:#354148; height:24px; padding-top:1px; padding-left:10px; padding-right:10px; display:block; float:right; margin-top:11px; font-weight:bold; font-size:medium;'});  //margin:9px 5px 8px 5px;  display:inline;
             $outputElem = $('<a>', {id: 'wecm-count',
                                     href:'https://www.waze.com/user/editor/' + userName.toLowerCase(),
-                                    target: "_blank",
+                                    target: '_blank',
                                     style:'text-decoration:none',
                                     'data-original-title': tooltipText});
             $outputElemContainer.append($outputElem);
@@ -109,8 +109,8 @@ function WECM_Injected() {
         }
         $outputElemContainer.css('background-color', bgColor);
         $outputElem.css('color', textColor).html(editCount);
-        var urCountText = "<div style='margin-top:8px;padding:3px;'>UR's&nbsp;Closed:&nbsp;" + urCount.count + "&nbsp;&nbsp;(since&nbsp;" + (new Date(urCount.since)).toLocaleDateString() + ")</div>";
-        var warningText = (savesWithoutIncrease > 0) ? "<div style='border-radius:8px;padding:3px;margin-top:8px;margin-bottom:5px;color:"+ tooltipTextColor + ";background-color:" + bgColor + ";'>" + savesWithoutIncrease + ' consecutive saves without an increase. (Are you throttled?)</div>' : '';
+        var urCountText = '<div style="margin-top:8px;padding:3px;">UR\'s&nbsp;Closed:&nbsp;' + urCount.count + '&nbsp;&nbsp;(since&nbsp;' + (new Date(urCount.since)).toLocaleDateString() + ')</div>';
+        var warningText = (savesWithoutIncrease > 0) ? '<div style="border-radius:8px;padding:3px;margin-top:8px;margin-bottom:5px;color:' + tooltipTextColor + ';background-color:' + bgColor + ';">' + savesWithoutIncrease + ' consecutive saves without an increase. (Are you throttled?)</div>' : '';
         $outputElem.attr('data-original-title', tooltipText + urCountText + warningText);
         lastEditCount = editCount;
         lastURCount = urCount;
@@ -124,7 +124,7 @@ function WECM_Injected() {
             // Do nothing
         }
 
-        if (msg && msg[0] === "wecmUpdateUi") {
+        if (msg && msg[0] === 'wecmUpdateUi') {
             var editCount = msg[1][0];
             var urCount = msg[1][1];
             updateEditCount(editCount, urCount);
@@ -147,6 +147,14 @@ function WECM_Injected() {
             _toastrSettings.wasWarned = false;
             _toastrSettings.wasReminded = false;
             toastr.remove();
+        }
+    }
+
+    function errorHandler(callback) {
+        try {
+            callback();
+        } catch (ex) {
+            console.error('Waze Edit Count Monitor:', ex);
         }
     }
 
@@ -175,9 +183,9 @@ function WECM_Injected() {
                 closeButton: true
                 //preventDuplicates: true
             };
-            W.model.actionManager.events.register('afterclearactions', null, checkEditCount);
-            W.model.actionManager.events.register('afteraction', null, checkChangedObjectCount);
-            W.model.actionManager.events.register('afterundoaction', null, checkChangedObjectCount);
+            W.model.actionManager.events.register('afterclearactions', null, () => errorHandler(checkEditCount));
+            W.model.actionManager.events.register('afteraction', null, () => errorHandler(checkChangedObjectCount));
+            W.model.actionManager.events.register('afterundoaction', null, () => errorHandler(checkChangedObjectCount));
 
             // Update the edit count first time.
             checkEditCount();
@@ -241,10 +249,10 @@ function WECM_Injected() {
             // Ignore errors
         }
 
-        if (msg && msg[0] === "wecmGetCounts") {
+        if (msg && msg[0] === 'wecmGetCounts') {
             var userName = msg[1];
             GM_xmlhttpRequest({
-                method: "GET",
+                method: 'GET',
                 url: 'https://www.waze.com/user/editor/' + userName,
                 onload: function(res) {
                     var profile = getEditorProfileFromSource(res.responseText);
@@ -254,9 +262,9 @@ function WECM_Injected() {
         }
     }
 
-    var WECM_Injected_script = document.createElement("script");
-    WECM_Injected_script.textContent = "" + WECM_Injected.toString() + " \n" + "WECM_Injected();";
-    WECM_Injected_script.setAttribute("type", "application/javascript");
+    var WECM_Injected_script = document.createElement('script');
+    WECM_Injected_script.textContent = '' + WECM_Injected.toString() + ' \nWECM_Injected();';
+    WECM_Injected_script.setAttribute('type', 'application/javascript');
     document.body.appendChild(WECM_Injected_script);
     window.addEventListener('message', receiveMessage);
 
