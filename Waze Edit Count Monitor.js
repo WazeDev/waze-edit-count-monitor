@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Waze Edit Count Monitor
 // @namespace       https://greasyfork.org/en/users/45389-mapomatic
-// @version         2018.07.21.002
+// @version         2018.07.24.001
 // @description     Displays your daily edit count in the WME toolbar.  Warns if you might be throttled.
 // @author          MapOMatic
 // @include         /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
@@ -35,6 +35,7 @@ function WECM_Injected() {
     var userName = null;
     var savesWithoutIncrease = 0;
     var lastURCount = null;
+    var lastMPCount = null;
     var tooltipText = 'Your daily edit count from your profile.  Click to open your profile.';
 
     function log(message, level) {
@@ -60,7 +61,7 @@ function WECM_Injected() {
         return count;
     }
 
-    function updateEditCount(editCount, urCount, noIncrement) {
+    function updateEditCount(editCount, urCount, mpCount, noIncrement) {
         var textColor;
         var bgColor;
         var tooltipTextColor;
@@ -84,7 +85,7 @@ function WECM_Injected() {
         }
 
         log('edit count = ' + editCount + ', UR count = ' + urCount.count, 1);
-        if (lastEditCount !== editCount || lastURCount.count !== urCount.count) {
+        if (lastEditCount !== editCount || lastURCount.count !== urCount.count || lastMPCount !== mpCount.count) {
             savesWithoutIncrease = 0;
         } else {
             if (!noIncrement) savesWithoutIncrease += 1;
@@ -110,8 +111,9 @@ function WECM_Injected() {
         $outputElemContainer.css('background-color', bgColor);
         $outputElem.css('color', textColor).html(editCount);
         var urCountText = '<div style="margin-top:8px;padding:3px;">UR\'s&nbsp;Closed:&nbsp;' + urCount.count + '&nbsp;&nbsp;(since&nbsp;' + (new Date(urCount.since)).toLocaleDateString() + ')</div>';
+        var mpCountText = '<div style="margin-top:0px;padding:0px 3px;">MP\'s&nbsp;Closed:&nbsp;' + mpCount.count + '&nbsp;&nbsp;(since&nbsp;' + (new Date(mpCount.since)).toLocaleDateString() + ')</div>';
         var warningText = (savesWithoutIncrease > 0) ? '<div style="border-radius:8px;padding:3px;margin-top:8px;margin-bottom:5px;color:' + tooltipTextColor + ';background-color:' + bgColor + ';">' + savesWithoutIncrease + ' consecutive saves without an increase. (Are you throttled?)</div>' : '';
-        $outputElem.attr('data-original-title', tooltipText + urCountText + warningText);
+        $outputElem.attr('data-original-title', tooltipText + urCountText + mpCountText + warningText);
         lastEditCount = editCount;
         lastURCount = urCount;
     }
@@ -127,7 +129,8 @@ function WECM_Injected() {
         if (msg && msg[0] === 'wecmUpdateUi') {
             var editCount = msg[1][0];
             var urCount = msg[1][1];
-            updateEditCount(editCount, urCount);
+            var mpCount = msg[1][2];
+            updateEditCount(editCount, urCount, mpCount);
         }
     }
 
@@ -229,14 +232,9 @@ function WECM_Injected() {
         return editingActivity[editingActivity.length-1];
     }
 
-    function getURCountFromProfile(profile) {
-        var editsByType = profile.editsByType;
-        for (var i=0; i < editsByType.length; i++) {
-            if (editsByType[i].key === 'mapUpdateRequest') {
-                return editsByType[i].value;
-            }
-        }
-        return -1;
+    function getEditCountByTypeFromProfile(profile, type) {
+        let edits = profile.editsByType.find(edits => edits.key === type);
+        return edits ? edits.value : -1;
     }
 
     // Handle messages from the page.
@@ -256,7 +254,7 @@ function WECM_Injected() {
                 url: 'https://www.waze.com/user/editor/' + userName,
                 onload: function(res) {
                     var profile = getEditorProfileFromSource(res.responseText);
-                    window.postMessage(JSON.stringify(['wecmUpdateUi',[getEditCountFromProfile(profile), getURCountFromProfile(profile)]]),'*');
+                    window.postMessage(JSON.stringify(['wecmUpdateUi',[getEditCountFromProfile(profile), getEditCountByTypeFromProfile(profile,'mapUpdateRequest'), getEditCountByTypeFromProfile(profile,'machineMapProblem')]]),'*');
                 }
             });
         }
