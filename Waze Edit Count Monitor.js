@@ -14,88 +14,90 @@
 // ==/UserScript==
 
 /* global W */
-/* global GM_info */
 /* global toastr */
+/* global $ */
+/* global GM_xmlhttpRequest */
 
 // This function is injected into the page to allow it to run in the page's context.
-function WECM_Injected() {
-    'use strict';
-
-    let _toastrSettings = {
+function wecmInjected() {
+    const TOASTR_URL = 'https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/toastr.min.js';
+    const TOASTR_SETTINGS = {
         remindAtEditCount: 100,
         warnAtEditCount: 150,
         wasReminded: false,
         wasWarned: false
     };
+    const TOOLTIP_TEXT = 'Your daily edit count from your profile. Click to open your profile.';
 
-    var debugLevel = 0;
-    var $outputElem = null;
-    var $outputElemContainer = null;
-    var lastEditCount = null;
-    var userName = null;
-    var savesWithoutIncrease = 0;
-    var lastURCount = null;
-    var lastMPCount = null;
-    var tooltipText = 'Your daily edit count from your profile.  Click to open your profile.';
+    let _$outputElem = null;
+    let _$outputElemContainer = null;
+    let _lastEditCount = null;
+    let _userName = null;
+    let _savesWithoutIncrease = 0;
+    let _lastURCount = null;
+    let _lastMPCount = null;
 
-    function log(message, level) {
-        if (message && level <= debugLevel) {
-            console.log('Edit Count Monitor: ' + message);
-        }
+    function log(message) {
+        console.log('Edit Count Monitor:', message);
     }
 
     function checkEditCount() {
-        window.postMessage(JSON.stringify(['wecmGetCounts',userName]),'*');
-        _toastrSettings.wasReminded = false;
-        _toastrSettings.wasWarned = false;
+        window.postMessage(JSON.stringify(['wecmGetCounts', _userName]), '*');
+        TOASTR_SETTINGS.wasReminded = false;
+        TOASTR_SETTINGS.wasWarned = false;
         toastr.remove();
     }
 
     function getChangedObjectCount() {
         let count = 0;
-        let changed = W.model._getModifiedObjects();
+        const changed = W.model._getModifiedObjects();
         Object.keys(changed).forEach(key => {
-            let obj = changed[key];
+            const obj = changed[key];
             count += obj.Insert.length + obj.Update.length + obj.Delete.length;
         });
         return count;
     }
 
     function updateEditCount(editCount, urCount, mpCount, noIncrement) {
-        var textColor;
-        var bgColor;
-        var tooltipTextColor;
-
         // Add the counter div if it doesn't exist.
         if ($('#wecm-count').length === 0) {
-            $outputElemContainer = $('<div>', {style:'position:relative; border-radius:23px; text-color:#354148; height:24px; padding-top:1px; padding-left:10px; padding-right:10px; display:block; float:right; margin-top:11px; font-weight:bold; font-size:medium;'});  //margin:9px 5px 8px 5px;  display:inline;
-            $outputElem = $('<a>', {id: 'wecm-count',
-                                    href:'https://www.waze.com/user/editor/' + userName.toLowerCase(),
-                                    target: '_blank',
-                                    style:'text-decoration:none',
-                                    'data-original-title': tooltipText});
-            $outputElemContainer.append($outputElem);
-            $('#edit-buttons').children().first().append($outputElemContainer);
-            $outputElem.tooltip({
+            _$outputElemContainer = $('<div>', { class: 'toolbar-button', style: 'font-weight: bold; font-size: 16px; border-radius: 10px;' });
+            const $innerDiv = $('<div>', { class: 'item-container', style: 'padding-left: 10px; padding-right: 10px; cursor: default;' });
+            _$outputElem = $('<a>', {
+                id: 'wecm-count',
+                href: `https://www.waze.com/user/editor/${_userName.toLowerCase()}`,
+                target: '_blank',
+                style: 'text-decoration:none',
+                'data-original-title': TOOLTIP_TEXT
+            });
+            $innerDiv.append(_$outputElem);
+            _$outputElemContainer.append($innerDiv);
+            $('#edit-buttons').children().first().append(_$outputElemContainer);
+            _$outputElem.tooltip({
                 placement: 'auto top',
-                delay: {show: 100, hide: 100},
+                delay: { show: 100, hide: 100 },
                 html: true,
-                template: '<div class="tooltip" role="tooltip" style="opacity:0.95"><div class="tooltip-arrow"></div><div class="my-tooltip-header" style="display:block;"><b></b></div><div class="my-tooltip-body tooltip-inner" style="display:block; font-weight:600; !important"></div></div>'
+                template: '<div class="tooltip" role="tooltip" style="opacity:0.95"><div class="tooltip-arrow"></div>'
+                    + '<div class="my-tooltip-header" style="display:block;"><b></b></div>'
+                    + '<div class="my-tooltip-body tooltip-inner" style="display:block; font-weight:600; !important"></div></div>'
             });
         }
 
-        log('edit count = ' + editCount + ', UR count = ' + urCount.count, 1);
-        if (lastEditCount !== editCount || lastURCount.count !== urCount.count || lastMPCount !== mpCount.count) {
-            savesWithoutIncrease = 0;
-        } else {
-            if (!noIncrement) savesWithoutIncrease += 1;
+        // log('edit count = ' + editCount + ', UR count = ' + urCount.count);
+        if (_lastEditCount !== editCount || _lastURCount.count !== urCount.count || _lastMPCount.count !== mpCount.count) {
+            _savesWithoutIncrease = 0;
+        } else if (!noIncrement) {
+            _savesWithoutIncrease++;
         }
 
-        switch (savesWithoutIncrease) {
+        let textColor;
+        let bgColor;
+        let tooltipTextColor;
+        switch (_savesWithoutIncrease) {
             case 0:
             case 1:
                 textColor = '#354148';
-                bgColor = '';
+                bgColor = 'white';
                 tooltipTextColor = 'white';
                 break;
             case 2:
@@ -108,18 +110,22 @@ function WECM_Injected() {
                 bgColor = 'red';
                 tooltipTextColor = 'white';
         }
-        $outputElemContainer.css('background-color', bgColor);
-        $outputElem.css('color', textColor).html(editCount);
-        var urCountText = '<div style="margin-top:8px;padding:3px;">UR\'s&nbsp;Closed:&nbsp;' + urCount.count + '&nbsp;&nbsp;(since&nbsp;' + (new Date(urCount.since)).toLocaleDateString() + ')</div>';
-        var mpCountText = '<div style="margin-top:0px;padding:0px 3px;">MP\'s&nbsp;Closed:&nbsp;' + mpCount.count + '&nbsp;&nbsp;(since&nbsp;' + (new Date(mpCount.since)).toLocaleDateString() + ')</div>';
-        var warningText = (savesWithoutIncrease > 0) ? '<div style="border-radius:8px;padding:3px;margin-top:8px;margin-bottom:5px;color:' + tooltipTextColor + ';background-color:' + bgColor + ';">' + savesWithoutIncrease + ' consecutive saves without an increase. (Are you throttled?)</div>' : '';
-        $outputElem.attr('data-original-title', tooltipText + urCountText + mpCountText + warningText);
-        lastEditCount = editCount;
-        lastURCount = urCount;
+        _$outputElemContainer.css('background-color', bgColor);
+        _$outputElem.css('color', textColor).html(editCount);
+        const urCountText = `<div style="margin-top:8px;padding:3px;">UR's&nbsp;Closed:&nbsp;${urCount.count}&nbsp;&nbsp;(since&nbsp;${
+            (new Date(urCount.since)).toLocaleDateString()})</div>`;
+        const mpCountText = `<div style="margin-top:0px;padding:0px 3px;">MP's&nbsp;Closed:&nbsp;${mpCount.count}&nbsp;&nbsp;(since&nbsp;${(
+            new Date(mpCount.since)).toLocaleDateString()})</div>`;
+        const warningText = (_savesWithoutIncrease > 0) ? `<div style="border-radius:8px;padding:3px;margin-top:8px;margin-bottom:5px;color:${
+            tooltipTextColor};background-color:${bgColor};">${_savesWithoutIncrease} consecutive saves without an increase. (Are you throttled?)</div>` : '';
+        _$outputElem.attr('data-original-title', TOOLTIP_TEXT + urCountText + mpCountText + warningText);
+        _lastEditCount = editCount;
+        _lastURCount = urCount;
+        _lastMPCount = mpCount;
     }
 
     function receiveMessage(event) {
-        var msg;
+        let msg;
         try {
             msg = JSON.parse(event.data);
         } catch (err) {
@@ -127,28 +133,27 @@ function WECM_Injected() {
         }
 
         if (msg && msg[0] === 'wecmUpdateUi') {
-            var editCount = msg[1][0];
-            var urCount = msg[1][1];
-            var mpCount = msg[1][2];
+            const editCount = msg[1][0];
+            const urCount = msg[1][1];
+            const mpCount = msg[1][2];
             updateEditCount(editCount, urCount, mpCount);
         }
     }
 
     function checkChangedObjectCount() {
-        let objectEditCount = getChangedObjectCount();
-        if (objectEditCount >= _toastrSettings.warnAtEditCount && !_toastrSettings.wasWarned) {
+        const objectEditCount = getChangedObjectCount();
+        if (objectEditCount >= TOASTR_SETTINGS.warnAtEditCount && !TOASTR_SETTINGS.wasWarned) {
             toastr.remove();
-            toastr.warning('You have edited at least ' + _toastrSettings.warnAtEditCount + ' objects. You should consider saving soon. ' +
-                           'If you get an error while saving, you may need to undo some actions and try again.', 'Reminder from Edit Count Monitor:');
-            _toastrSettings.wasWarned = true;
-            //_toastrSettings.wasReminded = true;
-        } else if (objectEditCount >= _toastrSettings.remindAtEditCount && !_toastrSettings.wasReminded) {
+            toastr.warning(`You have edited at least ${TOASTR_SETTINGS.warnAtEditCount} objects. You should consider saving soon. If you get an error while saving, you may need to undo some actions and try again.`, 'Reminder from Edit Count Monitor:');
+            TOASTR_SETTINGS.wasWarned = true;
+            // TOASTR_SETTINGS.wasReminded = true;
+        } else if (objectEditCount >= TOASTR_SETTINGS.remindAtEditCount && !TOASTR_SETTINGS.wasReminded) {
             toastr.remove();
-            toastr.info('You have edited at least ' + _toastrSettings.remindAtEditCount + ' objects. You should consider saving soon.', 'Reminder from Edit Count Monitor:');
-            _toastrSettings.wasReminded = true;
-        } else if (objectEditCount < _toastrSettings.remindAtEditCount) {
-            _toastrSettings.wasWarned = false;
-            _toastrSettings.wasReminded = false;
+            toastr.info(`You have edited at least ${TOASTR_SETTINGS.remindAtEditCount} objects. You should consider saving soon.`, 'Reminder from Edit Count Monitor:');
+            TOASTR_SETTINGS.wasReminded = true;
+        } else if (objectEditCount < TOASTR_SETTINGS.remindAtEditCount) {
+            TOASTR_SETTINGS.wasWarned = false;
+            TOASTR_SETTINGS.wasReminded = false;
             toastr.remove();
         }
     }
@@ -157,12 +162,12 @@ function WECM_Injected() {
         try {
             callback();
         } catch (ex) {
-            console.error('Waze Edit Count Monitor:', ex);
+            console.error('Edit Count Monitor:', ex);
         }
     }
 
-    function init() {
-        userName = W.loginManager.user.userName;
+    async function init() {
+        _userName = W.loginManager.user.userName;
         // Listen for events from sandboxed code.
         window.addEventListener('message', receiveMessage);
         // Listen for Save events.
@@ -175,41 +180,33 @@ function WECM_Injected() {
             }),
             $('<style type="text/css">#toast-container {position: absolute;} #toast-container > div {opacity: 0.95;} .toast-top-center {top: 30px;}</style>')
         );
-        $.getScript('https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/toastr.min.js', function() {
-            toastr.options = {
-                target:'#map',
-                timeOut: 9999999999,
-                positionClass: 'toast-top-right',
-                closeOnHover: false,
-                closeDuration: 0,
-                showDuration: 0,
-                closeButton: true
-                //preventDuplicates: true
-            };
-            W.model.actionManager.events.register('afterclearactions', null, () => errorHandler(checkEditCount));
-            W.model.actionManager.events.register('afteraction', null, () => errorHandler(checkChangedObjectCount));
-            W.model.actionManager.events.register('afterundoaction', null, () => errorHandler(checkChangedObjectCount));
+        await $.getScript(TOASTR_URL);
+        toastr.options = {
+            target: '#map',
+            timeOut: 9999999999,
+            positionClass: 'toast-top-right',
+            closeOnHover: false,
+            closeDuration: 0,
+            showDuration: 0,
+            closeButton: true
+            // preventDuplicates: true
+        };
+        W.model.actionManager.events.register('afterclearactions', null, () => errorHandler(checkEditCount));
+        W.model.actionManager.events.register('afteraction', null, () => errorHandler(checkChangedObjectCount));
+        W.model.actionManager.events.register('afterundoaction', null, () => errorHandler(checkChangedObjectCount));
 
-            // Update the edit count first time.
-            checkEditCount();
-            log('Initialized.',0);
-        });
+        // Update the edit count first time.
+        checkEditCount();
+        log('Initialized.');
     }
 
     function bootstrap() {
-        if (W &&
-            W.loginManager &&
-            W.loginManager.events &&
-            W.loginManager.events.register &&
-            W.map &&
-            W.loginManager.user) {
-            log('Initializing...', 0);
+        if (W && W.loginManager && W.loginManager.events && W.loginManager.events.register && W.map && W.loginManager.user) {
+            log('Initializing...');
             init();
         } else {
-            log('Bootstrap failed. Trying again...', 0);
-            window.setTimeout(function () {
-                bootstrap();
-            }, 1000);
+            log('Bootstrap failed. Trying again...');
+            setTimeout(bootstrap, 1000);
         }
     }
 
@@ -219,53 +216,52 @@ function WECM_Injected() {
 
 // Code that is NOT injected into the page.
 // Note that jQuery may or may not be available, so don't rely on it in this part of the script.
-(function(){
-    'use strict';
 
-    function getEditorProfileFromSource(source) {
-        var match = source.match(/gon.data=({.*?});gon.env=/i);
-        return JSON.parse(match[1]);
+function getEditorProfileFromSource(source) {
+    const match = source.match(/gon.data=({.*?});gon.env=/i);
+    return JSON.parse(match[1]);
+}
+
+function getEditCountFromProfile(profile) {
+    const editingActivity = profile.editingActivity;
+    return editingActivity[editingActivity.length - 1];
+}
+
+function getEditCountByTypeFromProfile(profile, type) {
+    const edits = profile.editsByType.find(editsEntry => editsEntry.key === type);
+    return edits ? edits.value : -1;
+}
+
+// Handle messages from the page.
+function receivePageMessage(event) {
+    let msg;
+    try {
+        msg = JSON.parse(event.data);
+    } catch (err) {
+        // Ignore errors
     }
 
-    function getEditCountFromProfile(profile) {
-        var editingActivity = profile.editingActivity;
-        return editingActivity[editingActivity.length-1];
+    if (msg && msg[0] === 'wecmGetCounts') {
+        const userName = msg[1];
+        GM_xmlhttpRequest({
+            method: 'GET',
+            url: `https://www.waze.com/user/editor/${userName}`,
+            onload: res => {
+                const profile = getEditorProfileFromSource(res.responseText);
+                window.postMessage(JSON.stringify(['wecmUpdateUi', [
+                    getEditCountFromProfile(profile),
+                    getEditCountByTypeFromProfile(profile, 'mapUpdateRequest'),
+                    getEditCountByTypeFromProfile(profile, 'machineMapProblem')
+                ]]), '*');
+            }
+        });
     }
+}
 
-    function getEditCountByTypeFromProfile(profile, type) {
-        let edits = profile.editsByType.find(edits => edits.key === type);
-        return edits ? edits.value : -1;
-    }
+const wecmInjectedScript = document.createElement('script');
+wecmInjectedScript.textContent = `${wecmInjected.toString()} \nwecmInjected();`;
+wecmInjectedScript.setAttribute('type', 'application/javascript');
+document.body.appendChild(wecmInjectedScript);
 
-    // Handle messages from the page.
-    function receiveMessage(event) {
-        var msg;
-        try {
-            msg = JSON.parse(event.data);
-        }
-        catch (err) {
-            // Ignore errors
-        }
-
-        if (msg && msg[0] === 'wecmGetCounts') {
-            var userName = msg[1];
-            GM_xmlhttpRequest({
-                method: 'GET',
-                url: 'https://www.waze.com/user/editor/' + userName,
-                onload: function(res) {
-                    var profile = getEditorProfileFromSource(res.responseText);
-                    window.postMessage(JSON.stringify(['wecmUpdateUi',[getEditCountFromProfile(profile), getEditCountByTypeFromProfile(profile,'mapUpdateRequest'), getEditCountByTypeFromProfile(profile,'machineMapProblem')]]),'*');
-                }
-            });
-        }
-    }
-
-
-    var WECM_Injected_script = document.createElement('script');
-    WECM_Injected_script.textContent = '' + WECM_Injected.toString() + ' \nWECM_Injected();';
-    WECM_Injected_script.setAttribute('type', 'application/javascript');
-    document.body.appendChild(WECM_Injected_script);
-
-    // Listen for events coming from the page script.
-    window.addEventListener('message', receiveMessage);
-})();
+// Listen for events coming from the page script.
+window.addEventListener('message', receivePageMessage);
