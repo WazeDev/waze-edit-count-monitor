@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Waze Edit Count Monitor
 // @namespace       https://greasyfork.org/en/users/45389-mapomatic
-// @version         2019.06.22.001
+// @version         2019.07.31.001
 // @description     Displays your daily edit count in the WME toolbar.  Warns if you might be throttled.
 // @author          MapOMatic
 // @include         /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
@@ -48,16 +48,6 @@ function wecmInjected() {
         toastr.remove();
     }
 
-    function getChangedObjectCount() {
-        let count = 0;
-        const changed = W.model._getModifiedObjects();
-        Object.keys(changed).forEach(key => {
-            const obj = changed[key];
-            count += obj.Insert.length + obj.Update.length + obj.Delete.length;
-        });
-        return count;
-    }
-
     function updateEditCount(editCount, urCount, mpCount, noIncrement) {
         // Add the counter div if it doesn't exist.
         if ($('#wecm-count').length === 0) {
@@ -93,22 +83,18 @@ function wecmInjected() {
         let textColor;
         let bgColor;
         let tooltipTextColor;
-        switch (_savesWithoutIncrease) {
-            case 0:
-            case 1:
-                textColor = '#354148';
-                bgColor = 'white';
-                tooltipTextColor = 'white';
-                break;
-            case 2:
-                textColor = '#354148';
-                bgColor = 'yellow';
-                tooltipTextColor = 'black';
-                break;
-            default:
-                textColor = 'white';
-                bgColor = 'red';
-                tooltipTextColor = 'white';
+        if (_savesWithoutIncrease < 5) {
+            textColor = '#354148';
+            bgColor = 'white';
+            tooltipTextColor = 'white';
+        } else if (_savesWithoutIncrease < 10) {
+            textColor = '#354148';
+            bgColor = 'yellow';
+            tooltipTextColor = 'black';
+        } else {
+            textColor = 'white';
+            bgColor = 'red';
+            tooltipTextColor = 'white';
         }
         _$outputElemContainer.css('background-color', bgColor);
         _$outputElem.css('color', textColor).html(editCount);
@@ -137,24 +123,6 @@ function wecmInjected() {
             const urCount = msg[1][1];
             const mpCount = msg[1][2];
             updateEditCount(editCount, urCount, mpCount);
-        }
-    }
-
-    function checkChangedObjectCount() {
-        const objectEditCount = getChangedObjectCount();
-        if (objectEditCount >= TOASTR_SETTINGS.warnAtEditCount && !TOASTR_SETTINGS.wasWarned) {
-            toastr.remove();
-            toastr.warning(`You have edited at least ${TOASTR_SETTINGS.warnAtEditCount} objects. You should consider saving soon. If you get an error while saving, you may need to undo some actions and try again.`, 'Reminder from Edit Count Monitor:');
-            TOASTR_SETTINGS.wasWarned = true;
-            // TOASTR_SETTINGS.wasReminded = true;
-        } else if (objectEditCount >= TOASTR_SETTINGS.remindAtEditCount && !TOASTR_SETTINGS.wasReminded) {
-            toastr.remove();
-            toastr.info(`You have edited at least ${TOASTR_SETTINGS.remindAtEditCount} objects. You should consider saving soon.`, 'Reminder from Edit Count Monitor:');
-            TOASTR_SETTINGS.wasReminded = true;
-        } else if (objectEditCount < TOASTR_SETTINGS.remindAtEditCount) {
-            TOASTR_SETTINGS.wasWarned = false;
-            TOASTR_SETTINGS.wasReminded = false;
-            toastr.remove();
         }
     }
 
@@ -192,8 +160,6 @@ function wecmInjected() {
             // preventDuplicates: true
         };
         W.model.actionManager.events.register('afterclearactions', null, () => errorHandler(checkEditCount));
-        W.model.actionManager.events.register('afteraction', null, () => errorHandler(checkChangedObjectCount));
-        W.model.actionManager.events.register('afterundoaction', null, () => errorHandler(checkChangedObjectCount));
 
         // Update the edit count first time.
         checkEditCount();
