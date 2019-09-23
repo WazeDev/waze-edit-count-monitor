@@ -55,7 +55,7 @@ function wecmInjected() {
             const $innerDiv = $('<div>', { class: 'item-container', style: 'padding-left: 10px; padding-right: 10px; cursor: default;' });
             _$outputElem = $('<a>', {
                 id: 'wecm-count',
-                href: `https://www.waze.com/user/editor/${_userName.toLowerCase()}`,
+                href: `${document.location.origin}/user/editor/${_userName.toLowerCase()}`,
                 target: '_blank',
                 style: 'text-decoration:none',
                 'data-original-title': TOOLTIP_TEXT
@@ -211,7 +211,7 @@ function receivePageMessage(event) {
         const userName = msg[1];
         GM_xmlhttpRequest({
             method: 'GET',
-            url: `https://www.waze.com/user/editor/${userName}`,
+            url: `${document.location.origin}/user/editor/${userName}`,
             onload: res => {
                 const profile = getEditorProfileFromSource(res.responseText);
                 window.postMessage(JSON.stringify(['wecmUpdateUi', [
