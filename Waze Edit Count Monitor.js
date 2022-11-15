@@ -9,6 +9,7 @@
 // @license         GNU GPLv3
 // @contributionURL https://github.com/WazeDev/Thank-The-Authors
 // @grant           GM_xmlhttpRequest
+// @grant           GM_addElement
 // @connect         www.waze.com
 
 // ==/UserScript==
@@ -16,7 +17,6 @@
 /* global W */
 /* global toastr */
 /* global $ */
-/* global GM_xmlhttpRequest */
 
 // This function is injected into the page to allow it to run in the page's context.
 function wecmInjected() {
@@ -224,10 +224,14 @@ function receivePageMessage(event) {
     }
 }
 
-const wecmInjectedScript = document.createElement('script');
-wecmInjectedScript.textContent = `${wecmInjected.toString()} \nwecmInjected();`;
-wecmInjectedScript.setAttribute('type', 'application/javascript');
-document.body.appendChild(wecmInjectedScript);
+//const wecmInjectedScript = document.createElement('script');
+//wecmInjectedScript.textContent = `${wecmInjected.toString()} \nwecmInjected();`;
+//wecmInjectedScript.setAttribute('type', 'application/javascript');
+//document.body.appendChild(wecmInjectedScript);
+
+let wecmInjectedScript = GM_addElement('script', {
+  textContent: "" + wecmInjected.toString() + " \n" + "wecmInjected();"
+});
 
 // Listen for events coming from the page script.
 window.addEventListener('message', receivePageMessage);
