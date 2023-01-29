@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Waze Edit Count Monitor
 // @namespace       https://greasyfork.org/en/users/45389-mapomatic
-// @version         2022.11.16.001
+// @version         2023.01.29.001
 // @description     Displays your daily edit count in the WME toolbar.  Warns if you might be throttled.
 // @author          MapOMatic
 // @include         /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
@@ -16,7 +16,6 @@
 
 /* global W */
 /* global toastr */
-/* global $ */
 
 // This function is injected into the page to allow it to run in the page's context.
 function wecmInjected() {
@@ -48,7 +47,7 @@ function wecmInjected() {
         toastr.remove();
     }
 
-    function updateEditCount(editCount, urCount, mpCount, noIncrement) {
+    function updateEditCount(editCount, urCount, purCount, mpCount, noIncrement) {
         // Add the counter div if it doesn't exist.
         if ($('#wecm-count').length === 0) {
             _$outputElemContainer = $('<div>', { class: 'toolbar-button', style: 'font-weight: bold; font-size: 16px; border-radius: 10px;' });
@@ -69,7 +68,7 @@ function wecmInjected() {
                 html: true,
                 template: '<div class="tooltip" role="tooltip" style="opacity:0.95"><div class="tooltip-arrow"></div>'
                     + '<div class="my-tooltip-header" style="display:block;"><b></b></div>'
-                    + '<div class="my-tooltip-body tooltip-inner" style="display:block; font-weight:600; !important"></div></div>'
+                    + '<div class="my-tooltip-body tooltip-inner" style="display:block;  !important; min-width: fit-content"></div></div>'
             });
         }
 
@@ -98,13 +97,15 @@ function wecmInjected() {
         }
         _$outputElemContainer.css('background-color', bgColor);
         _$outputElem.css('color', textColor).html(editCount);
-        const urCountText = `<div style="margin-top:8px;padding:3px;">UR's&nbsp;Closed:&nbsp;${urCount.count}&nbsp;&nbsp;(since&nbsp;${
+        const urCountText = `<div style="margin-top:8px;padding:3px;">URs&nbsp;Closed:&nbsp;${urCount.count}&nbsp;&nbsp;(since&nbsp;${
             (new Date(urCount.since)).toLocaleDateString()})</div>`;
-        const mpCountText = `<div style="margin-top:0px;padding:0px 3px;">MP's&nbsp;Closed:&nbsp;${mpCount.count}&nbsp;&nbsp;(since&nbsp;${(
+        const purCountText = `<div style="margin-top:0px;padding:0px 3px;">PURs&nbsp;Closed:&nbsp;${purCount.count}&nbsp;&nbsp;(since&nbsp;${(
+            new Date(purCount.since)).toLocaleDateString()})</div>`;
+        const mpCountText = `<div style="margin-top:0px;padding:0px 3px;">MPs&nbsp;Closed:&nbsp;${mpCount.count}&nbsp;&nbsp;(since&nbsp;${(
             new Date(mpCount.since)).toLocaleDateString()})</div>`;
         const warningText = (_savesWithoutIncrease > 0) ? `<div style="border-radius:8px;padding:3px;margin-top:8px;margin-bottom:5px;color:${
             tooltipTextColor};background-color:${bgColor};">${_savesWithoutIncrease} consecutive saves without an increase. (Are you throttled?)</div>` : '';
-        _$outputElem.attr('data-original-title', TOOLTIP_TEXT + urCountText + mpCountText + warningText);
+        _$outputElem.attr('data-original-title', TOOLTIP_TEXT + urCountText + purCountText + mpCountText + warningText);
         _lastEditCount = editCount;
         _lastURCount = urCount;
         _lastMPCount = mpCount;
@@ -121,8 +122,9 @@ function wecmInjected() {
         if (msg && msg[0] === 'wecmUpdateUi') {
             const editCount = msg[1][0];
             const urCount = msg[1][1];
-            const mpCount = msg[1][2];
-            updateEditCount(editCount, urCount, mpCount);
+            const purCount = msg[1][2];
+            const mpCount = msg[1][3];
+            updateEditCount(editCount, urCount, purCount, mpCount);
         }
     }
 
@@ -179,7 +181,6 @@ function wecmInjected() {
     bootstrap();
 }
 
-
 // Code that is NOT injected into the page.
 // Note that jQuery may or may not be available, so don't rely on it in this part of the script.
 
@@ -189,7 +190,7 @@ function getEditorProfileFromSource(source) {
 }
 
 function getEditCountFromProfile(profile) {
-    const editingActivity = profile.editingActivity;
+    const { editingActivity } = profile;
     return editingActivity[editingActivity.length - 1];
 }
 
@@ -217,6 +218,7 @@ function receivePageMessage(event) {
                 window.postMessage(JSON.stringify(['wecmUpdateUi', [
                     getEditCountFromProfile(profile),
                     getEditCountByTypeFromProfile(profile, 'mapUpdateRequest'),
+                    getEditCountByTypeFromProfile(profile, 'venueUpdateRequest'),
                     getEditCountByTypeFromProfile(profile, 'machineMapProblem')
                 ]]), '*');
             }
@@ -224,13 +226,8 @@ function receivePageMessage(event) {
     }
 }
 
-//const wecmInjectedScript = document.createElement('script');
-//wecmInjectedScript.textContent = `${wecmInjected.toString()} \nwecmInjected();`;
-//wecmInjectedScript.setAttribute('type', 'application/javascript');
-//document.body.appendChild(wecmInjectedScript);
-
-let wecmInjectedScript = GM_addElement('script', {
-  textContent: "" + wecmInjected.toString() + " \n" + "wecmInjected();"
+GM_addElement('script', {
+    textContent: `${wecmInjected.toString()} \nwecmInjected();`
 });
 
 // Listen for events coming from the page script.
