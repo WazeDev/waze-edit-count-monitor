@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Waze Edit Count Monitor
 // @namespace       https://greasyfork.org/en/users/45389-mapomatic
-// @version         2023.03.01.001
+// @version         2023.03.01.002
 // @description     Displays your daily edit count in the WME toolbar.  Warns if you might be throttled.
 // @author          MapOMatic
 // @include         /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
@@ -51,7 +51,7 @@ function wecmInjected() {
     function updateEditCount(editCount, urCount, purCount, mpCount, noIncrement) {
         // Add the counter div if it doesn't exist.
         if ($('#wecm-count').length === 0) {
-            _$outputElemContainer = $('<div>', { class: 'toolbar-button', style: 'font-weight: bold; font-size: 16px; border-radius: 10px;' });
+            _$outputElemContainer = $('<div>', { class: 'toolbar-button', style: 'font-weight: bold; font-size: 16px; border-radius: 10px; margin-left: 4px;' });
             const $innerDiv = $('<div>', { class: 'item-container', style: 'padding-left: 10px; padding-right: 10px; cursor: default;' });
             _$outputElem = $('<a>', {
                 id: 'wecm-count',
@@ -62,7 +62,7 @@ function wecmInjected() {
             });
             $innerDiv.append(_$outputElem);
             _$outputElemContainer.append($innerDiv);
-            $('#edit-buttons .waze-icon-trash').before(_$outputElemContainer);
+            $('#save-button').append(_$outputElemContainer);
             _$outputElem.tooltip({
                 placement: 'auto top',
                 delay: { show: 100, hide: 100 },
