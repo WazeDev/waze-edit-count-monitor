@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Waze Edit Count Monitor
 // @namespace       https://greasyfork.org/en/users/45389-mapomatic
-// @version         2023.01.29.001
+// @version         2023.03.01.001
 // @description     Displays your daily edit count in the WME toolbar.  Warns if you might be throttled.
 // @author          MapOMatic
 // @include         /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
@@ -11,7 +11,6 @@
 // @grant           GM_xmlhttpRequest
 // @grant           GM_addElement
 // @connect         www.waze.com
-
 // ==/UserScript==
 
 /* global W */
@@ -19,6 +18,8 @@
 
 // This function is injected into the page to allow it to run in the page's context.
 function wecmInjected() {
+    'use strict';
+
     const TOASTR_URL = 'https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/toastr.min.js';
     const TOASTR_SETTINGS = {
         remindAtEditCount: 100,
@@ -85,7 +86,7 @@ function wecmInjected() {
         if (_savesWithoutIncrease < 5) {
             textColor = '#354148';
             bgColor = 'white';
-            tooltipTextColor = 'white';
+            tooltipTextColor = 'black';
         } else if (_savesWithoutIncrease < 10) {
             textColor = '#354148';
             bgColor = 'yellow';
@@ -103,8 +104,13 @@ function wecmInjected() {
             new Date(purCount.since)).toLocaleDateString()})</div>`;
         const mpCountText = `<div style="margin-top:0px;padding:0px 3px;">MPs&nbsp;Closed:&nbsp;${mpCount.count}&nbsp;&nbsp;(since&nbsp;${(
             new Date(mpCount.since)).toLocaleDateString()})</div>`;
-        const warningText = (_savesWithoutIncrease > 0) ? `<div style="border-radius:8px;padding:3px;margin-top:8px;margin-bottom:5px;color:${
-            tooltipTextColor};background-color:${bgColor};">${_savesWithoutIncrease} consecutive saves without an increase. (Are you throttled?)</div>` : '';
+        let warningText = '';
+        if (_savesWithoutIncrease) {
+            warningText = `<div style="border-radius:8px;padding:3px;margin-top:8px;margin-bottom:5px;color:${
+                tooltipTextColor};background-color:${bgColor};">${_savesWithoutIncrease} ${
+                (_savesWithoutIncrease > 1) ? 'consecutive saves' : 'save'} without an increase. ${
+                (_savesWithoutIncrease >= 5) ? '(Are you throttled?)' : ''}</div>`;
+        }
         _$outputElem.attr('data-original-title', TOOLTIP_TEXT + urCountText + purCountText + mpCountText + warningText);
         _lastEditCount = editCount;
         _lastURCount = urCount;
@@ -184,23 +190,24 @@ function wecmInjected() {
 // Code that is NOT injected into the page.
 // Note that jQuery may or may not be available, so don't rely on it in this part of the script.
 
-function getEditorProfileFromSource(source) {
-    const match = source.match(/gon.data=({.*?});gon.env=/i);
-    return JSON.parse(match[1]);
-}
-
 function getEditCountFromProfile(profile) {
+    'use strict';
+
     const { editingActivity } = profile;
     return editingActivity[editingActivity.length - 1];
 }
 
 function getEditCountByTypeFromProfile(profile, type) {
+    'use strict';
+
     const edits = profile.editsByType.find(editsEntry => editsEntry.key === type);
     return edits ? edits.value : -1;
 }
 
 // Handle messages from the page.
 function receivePageMessage(event) {
+    'use strict';
+
     let msg;
     try {
         msg = JSON.parse(event.data);
@@ -212,9 +219,9 @@ function receivePageMessage(event) {
         const userName = msg[1];
         GM_xmlhttpRequest({
             method: 'GET',
-            url: `https://www.waze.com/user/editor/${userName}`,
+            url: `https://www.waze.com/Descartes/app/UserProfile/Profile?username=${userName}`,
             onload: res => {
-                const profile = getEditorProfileFromSource(res.responseText);
+                const profile = JSON.parse(res.responseText);
                 window.postMessage(JSON.stringify(['wecmUpdateUi', [
                     getEditCountFromProfile(profile),
                     getEditCountByTypeFromProfile(profile, 'mapUpdateRequest'),
