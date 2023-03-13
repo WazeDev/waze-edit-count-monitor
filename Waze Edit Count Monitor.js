@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Waze Edit Count Monitor
 // @namespace       https://greasyfork.org/en/users/45389-mapomatic
-// @version         2023.03.01.002
+// @version         2023.03.13.001
 // @description     Displays your daily edit count in the WME toolbar.  Warns if you might be throttled.
 // @author          MapOMatic
 // @include         /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
@@ -62,7 +62,7 @@ function wecmInjected() {
             });
             $innerDiv.append(_$outputElem);
             _$outputElemContainer.append($innerDiv);
-            $('#save-button').append(_$outputElemContainer);
+            $('#save-button').prepend(_$outputElemContainer);
             _$outputElem.tooltip({
                 placement: 'auto top',
                 delay: { show: 100, hide: 100 },
@@ -98,11 +98,11 @@ function wecmInjected() {
         }
         _$outputElemContainer.css('background-color', bgColor);
         _$outputElem.css('color', textColor).html(editCount);
-        const urCountText = `<div style="margin-top:8px;padding:3px;">URs&nbsp;Closed:&nbsp;${urCount.count}&nbsp;&nbsp;(since&nbsp;${
+        const urCountText = `<div style="margin-top:8px;padding:3px;">URs&nbsp;Closed:&nbsp;${urCount.count.toLocaleString()}&nbsp;&nbsp;(since&nbsp;${
             (new Date(urCount.since)).toLocaleDateString()})</div>`;
-        const purCountText = `<div style="margin-top:0px;padding:0px 3px;">PURs&nbsp;Closed:&nbsp;${purCount.count}&nbsp;&nbsp;(since&nbsp;${(
+        const purCountText = `<div style="margin-top:0px;padding:0px 3px;">PURs&nbsp;Closed:&nbsp;${purCount.count.toLocaleString()}&nbsp;&nbsp;(since&nbsp;${(
             new Date(purCount.since)).toLocaleDateString()})</div>`;
-        const mpCountText = `<div style="margin-top:0px;padding:0px 3px;">MPs&nbsp;Closed:&nbsp;${mpCount.count}&nbsp;&nbsp;(since&nbsp;${(
+        const mpCountText = `<div style="margin-top:0px;padding:0px 3px;">MPs&nbsp;Closed:&nbsp;${mpCount.count.toLocaleString()}&nbsp;&nbsp;(since&nbsp;${(
             new Date(mpCount.since)).toLocaleDateString()})</div>`;
         let warningText = '';
         if (_savesWithoutIncrease) {
