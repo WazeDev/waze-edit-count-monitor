@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Waze Edit Count Monitor
 // @namespace       https://greasyfork.org/en/users/45389-mapomatic
-// @version         2023.04.25.001
+// @version         2023.04.25.002
 // @description     Displays your daily edit count in the WME toolbar.  Warns if you might be throttled.
 // @author          MapOMatic
 // @include         /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
@@ -51,7 +51,7 @@ function wecmInjected() {
     function updateEditCount(editCount, urCount, purCount, mpCount, noIncrement) {
         // Add the counter div if it doesn't exist.
         if ($('#wecm-count').length === 0) {
-            _$outputElemContainer = $('<div>', { class: 'toolbar-button', style: 'font-weight: bold; font-size: 16px; border-radius: 10px;' });
+            _$outputElemContainer = $('<div>', { class: 'toolbar-button', style: 'font-weight: bold; font-size: 16px; border-radius: 10px; margin-left: 4px;' });
             const $innerDiv = $('<div>', { class: 'item-container', style: 'padding-left: 10px; padding-right: 10px; cursor: default;' });
             _$outputElem = $('<a>', {
                 id: 'wecm-count',
@@ -62,9 +62,12 @@ function wecmInjected() {
             });
             $innerDiv.append(_$outputElem);
             _$outputElemContainer.append($innerDiv);
-            // 4/5/2023 - added this to fix issue in beta WME. Can be removed once the layout reaches production.
-            if (document.querySelector('#save-button')?.parentElement.id !== 'edit-buttons') {
+            if ($('#toolbar > div > div.secondary-toolbar > div.secondary-toolbar-actions > div.secondary-toolbar-actions-edit').length) {
+                // Production WME, as of 4/25/2023
                 $('#toolbar > div > div.secondary-toolbar > div.secondary-toolbar-actions > div.secondary-toolbar-actions-edit').after(_$outputElemContainer);
+            } else {
+                // Beta WME, as of 4/25/2023
+                $('#toolbar > div > div.secondary-toolbar > div:nth-child(1)').after(_$outputElemContainer);
             }
             _$outputElem.tooltip({
                 placement: 'auto top',
