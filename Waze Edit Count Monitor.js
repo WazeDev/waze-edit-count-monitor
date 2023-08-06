@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Waze Edit Count Monitor
 // @namespace       https://greasyfork.org/en/users/45389-mapomatic
-// @version         2023.05.03.002
+// @version         2023.08.05.001
 // @description     Displays your daily edit count in the WME toolbar.  Warns if you might be throttled.
 // @author          MapOMatic
 // @include         /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
@@ -158,7 +158,7 @@
         }
 
         async function init() {
-            _userName = W.loginManager.user.userName;
+            _userName = W.loginManager.user.getUsername();
             // Listen for events from sandboxed code.
             window.addEventListener('message', receiveMessage);
             // Listen for Save events.
