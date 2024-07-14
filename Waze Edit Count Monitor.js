@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Waze Edit Count Monitor
 // @namespace       https://greasyfork.org/en/users/45389-mapomatic
-// @version         2023.08.05.001
+// @version         2024.07.14.001
 // @description     Displays your daily edit count in the WME toolbar.  Warns if you might be throttled.
 // @author          MapOMatic
 // @include         /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
@@ -157,6 +157,7 @@
             }
         }
 
+        let _ignoreNextEditCountCheck = false;
         async function init() {
             _userName = W.loginManager.user.getUsername();
             // Listen for events from sandboxed code.
@@ -182,7 +183,14 @@
                 closeButton: true
                 // preventDuplicates: true
             };
-            W.model.actionManager.events.register('afterclearactions', null, () => errorHandler(checkEditCount));
+            W.editingMediator.on('change:editingHouseNumbers', () => { _ignoreNextEditCountCheck = true; });
+            W.model.actionManager.events.register('afterclearactions', null, () => setTimeout(() => {
+                if (!_ignoreNextEditCountCheck) {
+                    errorHandler(checkEditCount);
+                } else {
+                    _ignoreNextEditCountCheck = false;
+                }
+            }, 100));
 
             // Update the edit count first time.
             checkEditCount();
