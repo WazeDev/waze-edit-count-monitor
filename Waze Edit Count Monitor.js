@@ -162,7 +162,7 @@
 
         let _ignoreNextEditCountCheck = false;
         async function init() {
-            sdk = getWmeSdk({ scriptName: 'Waze Edit Count Monitor', scriptId: 'Waze Edit Count Monitor' });
+            sdk = getWmeSdk({ scriptName: 'Waze Edit Count Monitor', scriptId: 'wazeEditCountMonitor' });
             _userName = sdk.State.userInfo.userName;
             // Listen for events from sandboxed code.
             window.addEventListener('message', receiveMessage);
