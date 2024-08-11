@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Waze Edit Count Monitor
 // @namespace       https://greasyfork.org/en/users/45389-mapomatic
-// @version         2024.07.14.001
+// @version         2024.08.11.001
 // @description     Displays your daily edit count in the WME toolbar.  Warns if you might be throttled.
 // @author          MapOMatic
 // @include         /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
@@ -11,6 +11,7 @@
 // @contributionURL https://github.com/WazeDev/Thank-The-Authors
 // @grant           GM_xmlhttpRequest
 // @grant           GM_addElement
+// @grant           GM_addStyle
 // @connect         www.waze.com
 // @connect         greasyfork.org
 // ==/UserScript==
@@ -81,9 +82,9 @@
                     placement: 'auto top',
                     delay: { show: 100, hide: 100 },
                     html: true,
-                    template: '<div class="tooltip" role="tooltip" style="opacity:0.95"><div class="tooltip-arrow"></div>'
-                        + '<div class="my-tooltip-header" style="display:block;"><b></b></div>'
-                        + '<div class="my-tooltip-body tooltip-inner" style="display:block;  !important; min-width: fit-content"></div></div>'
+                    template: '<div class="tooltip wecm-tooltip" role="tooltip"><div class="tooltip-arrow"></div>'
+                        + '<div class="wecm-tooltip-header"><b></b></div>'
+                        + '<div class="wecm-tooltip-body tooltip-inner""></div></div>'
                 });
             }
 
@@ -276,6 +277,7 @@
     }
 
     function injectScript() {
+        GM_addStyle('.wecm-tooltip-body { max-width: 230px; }');
         GM_addElement('script', {
             textContent: `${wecmInjected.toString()} \nwecmInjected();`
         });
