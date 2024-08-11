@@ -11,6 +11,7 @@
 // @contributionURL https://github.com/WazeDev/Thank-The-Authors
 // @grant           GM_xmlhttpRequest
 // @grant           GM_addElement
+// @grant           GM_addStyle
 // @connect         www.waze.com
 // @connect         greasyfork.org
 // ==/UserScript==
@@ -18,6 +19,7 @@
 /* global W */
 /* global toastr */
 /* global WazeWrap */
+/* global getWmeSdk */
 
 (function main() {
     'use strict';
@@ -25,6 +27,7 @@
     const SCRIPT_NAME = GM_info.script.name;
     const SCRIPT_VERSION = GM_info.script.version;
     const DOWNLOAD_URL = 'https://greasyfork.org/scripts/40313-waze-edit-count-monitor/code/Waze%20Edit%20Count%20Monitor.user.js';
+    let sdk;
 
     // This function is injected into the page to allow it to run in the page's context.
     function wecmInjected() {
@@ -159,7 +162,8 @@
 
         let _ignoreNextEditCountCheck = false;
         async function init() {
-            _userName = W.loginManager.user.getUsername();
+            sdk = getWmeSdk({ scriptName: 'Waze Edit Count Monitor', scriptId: 'Waze Edit Count Monitor' });
+            _userName = sdk.State.userInfo.userName;
             // Listen for events from sandboxed code.
             window.addEventListener('message', receiveMessage);
             // Listen for Save events.
@@ -198,12 +202,11 @@
         }
 
         function bootstrap() {
-            if (W && W.loginManager && W.loginManager.events && W.loginManager.events.register && W.map && W.loginManager.user) {
+            if (window.getWmeSdk) {
                 log('Initializing...');
                 init();
             } else {
-                log('Bootstrap failed. Trying again...');
-                setTimeout(bootstrap, 1000);
+                document.addEventListener('wme-ready', init, { once: true });
             }
         }
 
