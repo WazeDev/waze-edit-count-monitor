@@ -57,7 +57,7 @@
                 const $innerDiv = $('<div>', { class: 'item-container', style: 'padding-left: 10px; padding-right: 10px; cursor: default;' });
                 _$outputElem = $('<a>', {
                     id: 'wecm-count',
-                    href: `https://www.waze.com/user/editor/${userName.toLowerCase()}`,
+                    href: sdk.DataModel.Users.getUserProfileLink({ userName }),
                     target: '_blank',
                     style: 'text-decoration:none',
                     'data-original-title': TOOLTIP_TEXT
