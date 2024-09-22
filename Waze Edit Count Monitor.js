@@ -8,6 +8,8 @@
 // @require         https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js
 // @require         https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js
 // @require         https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/toastr.min.js
+// @require         https://update.greasyfork.org/scripts/509664/WME%20Utils%20-%20Bootstrap.js
+// TODO: ADD BOOTSTRAPPER
 // @license         GNU GPLv3
 // @contributionURL https://github.com/WazeDev/Thank-The-Authors
 // @grant           GM_xmlhttpRequest
@@ -18,16 +20,15 @@
 // ==/UserScript==
 
 /* global toastr */
-/* global WazeWrap */
-/* global getWmeSdk */
+/* global bootstrap */
 
 (function main() {
     'use strict';
 
     const scriptName = GM_info.script.name;
     const scriptId = 'wazeEditCountMonitor';
-    const SCRIPT_VERSION = GM_info.script.version;
-    const DOWNLOAD_URL = 'https://greasyfork.org/scripts/40313-waze-edit-count-monitor/code/Waze%20Edit%20Count%20Monitor.user.js';
+    const scriptVersion = GM_info.script.version;
+    const downloadUrl = 'https://greasyfork.org/scripts/40313-waze-edit-count-monitor/code/Waze%20Edit%20Count%20Monitor.user.js';
     let sdk;
 
     const TOASTR_URL = 'https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/toastr.min.js';
@@ -167,19 +168,8 @@
         }
     }
 
-    function loadScriptUpdateMonitor() {
-        let updateMonitor;
-        try {
-            updateMonitor = new WazeWrap.Alerts.ScriptUpdateMonitor(scriptName, SCRIPT_VERSION, DOWNLOAD_URL, GM_xmlhttpRequest);
-            updateMonitor.start();
-        } catch (ex) {
-            // Report, but don't stop if ScriptUpdateMonitor fails.
-            console.error(`${scriptName}:`, ex);
-        }
-    }
-
-    async function init() {
-        loadScriptUpdateMonitor();
+    async function init(wmeSdk) {
+        sdk = wmeSdk;
         //GM_addStyle('.wecm-tooltip-body { max-width: 230px; }');
         userName = sdk.State.getUserInfo().userName;
 
@@ -244,42 +234,16 @@
         if (result.success) updateEditCount();
     }
 
-    function wazeWrapReady() {
-        return new Promise(resolve => {
-            (function checkWazeWrapReady(tries = 0) {
-                if (WazeWrap.Ready) {
-                    resolve();
-                } else if (tries < 1000) {
-                    setTimeout(checkWazeWrapReady, 200, ++tries);
-                }
-            })();
-        });
-    }
-
-    function wmeReady() {
-        sdk = getWmeSdk({ scriptName, scriptId });
-        return new Promise(resolve => {
-            if (sdk.State.isReady()) resolve();
-            sdk.Events.once('wme-ready').then(resolve);
-        });
-    }
-
-    async function bootstrap() {
-        // SDK: Remove this when fixed
-        if (!window.SDK_INITIALIZED) {
-            window.SDK_INITIALIZED = new Promise(resolve => {
-                document.body.addEventListener('sdk-initialized', () => resolve());
-            });
-        }
-        // --------
-
-        await window.SDK_INITIALIZED;
-        await wmeReady();
-        await wazeWrapReady();
-        init();
-    }
-
-    bootstrap();
+    bootstrap({
+        scriptName,
+        scriptId,
+        useWazeWrap: true,
+        scriptUpdateMonitor: {
+            scriptVersion,
+            downloadUrl
+        },
+        callback: init
+    });
 
     // Handle messages from the page.
     // function receivePageMessage(event) {
