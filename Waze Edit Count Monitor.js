@@ -22,7 +22,7 @@
 /* global toastr */
 /* global bootstrap */
 
-(function main() {
+(async function main() {
     'use strict';
 
     const scriptName = GM_info.script.name;
@@ -168,8 +168,7 @@
         }
     }
 
-    async function init(wmeSdk) {
-        sdk = wmeSdk;
+    async function init() {
         //GM_addStyle('.wecm-tooltip-body { max-width: 230px; }');
         userName = sdk.State.getUserInfo().userName;
 
@@ -234,16 +233,16 @@
         if (result.success) updateEditCount();
     }
 
-    bootstrap({
+    sdk = await bootstrap({
         scriptName,
         scriptId,
-        useWazeWrap: true,
         scriptUpdateMonitor: {
             scriptVersion,
             downloadUrl
-        },
-        callback: init
+        }
     });
+
+    init();
 
     // Handle messages from the page.
     // function receivePageMessage(event) {
