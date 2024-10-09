@@ -9,7 +9,6 @@
 // @require         https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js
 // @require         https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/toastr.min.js
 // @require         https://update.greasyfork.org/scripts/509664/WME%20Utils%20-%20Bootstrap.js
-// TODO: ADD BOOTSTRAPPER
 // @license         GNU GPLv3
 // @contributionURL https://github.com/WazeDev/Thank-The-Authors
 // @grant           GM_xmlhttpRequest
@@ -25,25 +24,15 @@
 (async function main() {
     'use strict';
 
-    const scriptName = GM_info.script.name;
-    const scriptId = 'wazeEditCountMonitor';
-    const scriptVersion = GM_info.script.version;
     const downloadUrl = 'https://greasyfork.org/scripts/40313-waze-edit-count-monitor/code/Waze%20Edit%20Count%20Monitor.user.js';
-    let sdk;
+    const sdk = await bootstrap({ scriptUpdateMonitor: { downloadUrl } });
 
-    const TOASTR_URL = 'https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/toastr.min.js';
-    const TOASTR_SETTINGS = {
-        remindAtEditCount: 100,
-        warnAtEditCount: 150,
-        wasReminded: false,
-        wasWarned: false
-    };
     const TOOLTIP_TEXT = 'Your daily edit count from your profile. Click to open your profile.';
 
-    let _$outputElem = null;
-    let _$outputElemContainer = null;
+    let $outputElem = null;
+    let $outputElemContainer = null;
     let userName;
-    let _savesWithoutIncrease = 0;
+    let savesWithoutIncrease = 0;
     let lastProfile;
 
     function log(message) {
@@ -54,25 +43,25 @@
         sdk.DataModel.Users.getUserProfile({ userName }).then(profile => {
         // Add the counter div if it doesn't exist.
             if ($('#wecm-count').length === 0) {
-                _$outputElemContainer = $('<div>', { class: 'toolbar-button', style: 'font-weight: bold; font-size: 16px; border-radius: 10px; margin-left: 4px;' });
+                $outputElemContainer = $('<div>', { class: 'toolbar-button', style: 'font-weight: bold; font-size: 16px; border-radius: 10px; margin-left: 4px;' });
                 const $innerDiv = $('<div>', { class: 'item-container', style: 'padding-left: 10px; padding-right: 10px; cursor: default;' });
-                _$outputElem = $('<a>', {
+                $outputElem = $('<a>', {
                     id: 'wecm-count',
                     href: sdk.DataModel.Users.getUserProfileLink({ userName }),
                     target: '_blank',
                     style: 'text-decoration:none',
                     'data-original-title': TOOLTIP_TEXT
                 });
-                $innerDiv.append(_$outputElem);
-                _$outputElemContainer.append($innerDiv);
+                $innerDiv.append($outputElem);
+                $outputElemContainer.append($innerDiv);
                 if ($('#toolbar > div > div.secondary-toolbar > div.secondary-toolbar-actions > div.secondary-toolbar-actions-edit').length) {
                 // Production WME, as of 4/25/2023
-                    $('#toolbar > div > div.secondary-toolbar > div.secondary-toolbar-actions > div.secondary-toolbar-actions-edit').after(_$outputElemContainer);
+                    $('#toolbar > div > div.secondary-toolbar > div.secondary-toolbar-actions > div.secondary-toolbar-actions-edit').after($outputElemContainer);
                 } else {
                 // Beta WME, as of 4/25/2023
-                    $('#toolbar > div > div.secondary-toolbar > div:nth-child(1)').after(_$outputElemContainer);
+                    $('#toolbar > div > div.secondary-toolbar > div:nth-child(1)').after($outputElemContainer);
                 }
-                _$outputElem.tooltip({
+                $outputElem.tooltip({
                     placement: 'auto top',
                     delay: { show: 100, hide: 100 },
                     html: true,
@@ -90,118 +79,59 @@
                     || lastProfile.editCountByType.updateRequests !== profile.editCountByType.updateRequests
                     || lastProfile.editCountByType.mapProblems !== profile.editCountByType.mapProblems
                     || lastProfile.editCountByType.placeUpdateRequests !== profile.editCountByType.placeUpdateRequests) {
-                _savesWithoutIncrease = 0;
+                savesWithoutIncrease = 0;
             } else {
-                _savesWithoutIncrease++;
+                savesWithoutIncrease++;
             }
 
             let textColor;
             let bgColor;
-            let tooltipTextColor;
-            if (_savesWithoutIncrease < 5) {
+            let warningStyleClass;
+            if (savesWithoutIncrease < 5) {
                 textColor = '#354148';
                 bgColor = 'white';
-                tooltipTextColor = 'black';
-            } else if (_savesWithoutIncrease < 10) {
+                warningStyleClass = '';
+            } else if (savesWithoutIncrease < 10) {
                 textColor = '#354148';
                 bgColor = 'yellow';
-                tooltipTextColor = 'black';
+                warningStyleClass = 'yellow';
             } else {
                 textColor = 'white';
                 bgColor = 'red';
-                tooltipTextColor = 'white';
+                warningStyleClass = 'red';
             }
-            _$outputElemContainer.css('background-color', bgColor);
-            // SDK: This doesn't work. Need the daily edit count, not the total edit count.
-            // Also note that editCount does not appear to reliably update before the wme-save-finished event.
-            // This could be a problem if the daily edit count also does not reliable update in time.
-            _$outputElem.css('color', textColor).html(profile.editCount);
-            const urCountText = `<div style="margin-top:8px;padding:3px;">URs&nbsp;Closed:&nbsp;${
-                profile.editCountByType.updateRequests.toLocaleString()}</div>`;
-            const purCountText = `<div style="margin-top:0px;padding:0px 3px;">PURs&nbsp;Closed:&nbsp;${
-                profile.editCountByType.placeUpdateRequests.toLocaleString()}</div>`;
-            const mpCountText = `<div style="margin-top:0px;padding:0px 3px;">MPs&nbsp;Closed:&nbsp;${
-                profile.editCountByType.mapProblems.toLocaleString()}</div>`;
-            // const urCountText = `<div style="margin-top:8px;padding:3px;">URs&nbsp;Closed:&nbsp;${
-            //     profile.updateRequests.toLocaleString()}&nbsp;&nbsp;(since&nbsp;${
-            //     (new Date(urCount.since)).toLocaleDateString()})</div>`;
-            // const purCountText = `<div style="margin-top:0px;padding:0px 3px;">PURs&nbsp;Closed:&nbsp;${
-            //     purCount.count.toLocaleString()}&nbsp;&nbsp;(since&nbsp;${(
-            //     new Date(purCount.since)).toLocaleDateString()})</div>`;
-            // const mpCountText = `<div style="margin-top:0px;padding:0px 3px;">MPs&nbsp;Closed:&nbsp;${
-            //     mpCount.count.toLocaleString()}&nbsp;&nbsp;(since&nbsp;${(
-            //     new Date(mpCount.since)).toLocaleDateString()})</div>`;
+            $outputElemContainer.css('background-color', bgColor);
+
+            $outputElem.css('color', textColor).html(profile.dailyEditCount[profile.dailyEditCount.length - 1].toLocaleString());
+            const totalEditCountText = `<li>Total&nbsp;edits:&nbsp;${profile.totalEditCount.toLocaleString()}</li>`;
+            const urCountText = `<li>URs&nbsp;closed:&nbsp;${profile.editCountByType.updateRequests.toLocaleString()}</li>`;
+            const purCountText = `<li>PURs&nbsp;closed:&nbsp;${profile.editCountByType.placeUpdateRequests.toLocaleString()}</li>`;
+            const mpCountText = `<li>MPs&nbsp;closed:&nbsp;${profile.editCountByType.mapProblems.toLocaleString()}</li>`;
+            const segmentEditCountText = `<li>Segment&nbsp;edits:&nbsp;${profile.editCountByType.segments.toLocaleString()}</li>`;
+            const placeEditCountText = `<li>Place&nbsp;edits:&nbsp;${profile.editCountByType.venues.toLocaleString()}</li>`;
+            const hnEditCountText = `<li>Segment&nbsp;HN&nbsp;edits:&nbsp;${profile.editCountByType.segmentHouseNumbers.toLocaleString()}</li>`;
             let warningText = '';
-            if (_savesWithoutIncrease) {
-                warningText = `<div style="border-radius:8px;padding:3px;margin-top:8px;margin-bottom:5px;color:${
-                    tooltipTextColor};background-color:${bgColor};">${_savesWithoutIncrease} ${
-                    (_savesWithoutIncrease > 1) ? 'consecutive saves' : 'save'} without an increase. ${
-                    (_savesWithoutIncrease >= 5) ? '(Are you throttled?)' : ''}</div>`;
+            if (savesWithoutIncrease) {
+                warningText = `<div class="wecm-warning ${warningStyleClass}">${savesWithoutIncrease} ${
+                    (savesWithoutIncrease > 1) ? 'consecutive saves' : 'save'} without an increase. ${
+                    (savesWithoutIncrease >= 5) ? '(Are you throttled?)' : ''}</div>`;
             }
-            _$outputElem.attr('data-original-title', TOOLTIP_TEXT + urCountText + purCountText + mpCountText + warningText);
+            $outputElem.attr('data-original-title', `${
+                TOOLTIP_TEXT}<ul>${
+                totalEditCountText}${
+                urCountText}${
+                purCountText}${
+                mpCountText}${
+                segmentEditCountText}${
+                hnEditCountText}${
+                placeEditCountText}</ul>${
+                warningText}`);
             lastProfile = profile;
         });
     }
 
-    // function receiveMessage(event) {
-    //     let msg;
-    //     try {
-    //         msg = JSON.parse(event.data);
-    //     } catch (err) {
-    //         // Do nothing
-    //     }
-
-    //     if (msg && msg[0] === 'wecmUpdateUi') {
-    //         const editCount = msg[1][0];
-    //         const urCount = msg[1][1];
-    //         const purCount = msg[1][2];
-    //         const mpCount = msg[1][3];
-    //         updateEditCount(editCount, urCount, purCount, mpCount);
-    //     }
-    // }
-
-    function errorHandler(callback) {
-        try {
-            callback();
-        } catch (ex) {
-            console.error('Edit Count Monitor:', ex);
-        }
-    }
-
     async function init() {
-        //GM_addStyle('.wecm-tooltip-body { max-width: 230px; }');
         userName = sdk.State.getUserInfo().userName;
-
-        // SDK: Testing ways to get daily editing data. These don't work in the script context.
-        // Fetch throws a CSP error, and GM_xmlhttpRequest returns a "not logged in" error
-        // If they can't add the daily edit count to the profile, or if the returned values
-        // aren't updated in time when wme-save-finished fires, need to revert back to
-        // injecting the script into the page context like it was before. If they do add it
-        // but timing is an issue, look into a setTimeout function that checks a few times
-        // after the wme-save-finished event. If injecting, can probably just inject code
-        // to get the sdk, wait for wme-save-finished event, and post a message. Then receive
-        // the message in the script.
-
-        // fetch(`https://www.waze.com/Descartes/app/UserProfile/Profile?username=${userName}`).then(res => {
-        //     debugger;
-        //     const profile = JSON.parse(res.responseText);
-        // });
-
-        // GM_xmlhttpRequest({
-        //     method: 'GET',
-        //     url: `https://www.waze.com/Descartes/app/UserProfile/Profile?username=${userName}`,
-        //     onload: res => {
-        //         debugger;
-        //         const profile = JSON.parse(res.responseText);
-
-        //         // window.postMessage(JSON.stringify(['wecmUpdateUi', [
-        //             // getEditCountFromProfile(profile),
-        //             // getEditCountByTypeFromProfile(profile, 'mapUpdateRequest'),
-        //             // getEditCountByTypeFromProfile(profile, 'venueUpdateRequest'),
-        //             // getEditCountByTypeFromProfile(profile, 'machineMapProblem')
-        //         // ]]), '*');
-        //     }
-        // });
 
         $('head').append(
             $('<link/>', {
@@ -223,7 +153,14 @@
             // preventDuplicates: true
         };
 
-        sdk.Events.on('wme-save-finished', onSaveFinished);
+        GM_addStyle(`
+            .wecm-tooltip li {text-align: left;}
+            .wecm-tooltip .wecm-warning {border-radius:8px; padding:3px; margin-top:8px; margin-bottom:5px;}
+            .wecm-tooltip .wecm-warning.yellow {background-color:yellow; color:black;}
+            .wecm-tooltip .wecm-warning.red {background-color:red; color:white;}
+        `);
+
+        sdk.Events.on({ eventName: 'wme-save-finished', eventHandler: onSaveFinished });
         // Update the edit count first time.
         updateEditCount();
         log('Initialized.');
@@ -233,41 +170,5 @@
         if (result.success) updateEditCount();
     }
 
-    sdk = await bootstrap({
-        scriptName,
-        scriptId,
-        scriptUpdateMonitor: {
-            scriptVersion,
-            downloadUrl
-        }
-    });
-
     init();
-
-    // Handle messages from the page.
-    // function receivePageMessage(event) {
-    //     let msg;
-    //     try {
-    //         msg = JSON.parse(event.data);
-    //     } catch (err) {
-    //         // Ignore errors
-    //     }
-
-    //     if (msg && msg[0] === 'wecmGetCounts') {
-    //         const userName = msg[1];
-    //         GM_xmlhttpRequest({
-    //             method: 'GET',
-    //             url: `https://www.waze.com/Descartes/app/UserProfile/Profile?username=${userName}`,
-    //             onload: res => {
-    //                 const profile = JSON.parse(res.responseText);
-    //                 window.postMessage(JSON.stringify(['wecmUpdateUi', [
-    //                     getEditCountFromProfile(profile),
-    //                     getEditCountByTypeFromProfile(profile, 'mapUpdateRequest'),
-    //                     getEditCountByTypeFromProfile(profile, 'venueUpdateRequest'),
-    //                     getEditCountByTypeFromProfile(profile, 'machineMapProblem')
-    //                 ]]), '*');
-    //             }
-    //         });
-    //     }
-    // }
 })();
