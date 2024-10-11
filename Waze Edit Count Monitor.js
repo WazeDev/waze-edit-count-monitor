@@ -1,13 +1,11 @@
 // ==UserScript==
 // @name            Waze Edit Count Monitor
 // @namespace       https://greasyfork.org/en/users/45389-mapomatic
-// @version         2024.08.11.001
+// @version         2024.10.11.000
 // @description     Displays your daily edit count in the WME toolbar.  Warns if you might be throttled.
 // @author          MapOMatic
 // @include         /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
-// @require         https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js
 // @require         https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js
-// @require         https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/toastr.min.js
 // @require         https://update.greasyfork.org/scripts/509664/WME%20Utils%20-%20Bootstrap.js
 // @license         GNU GPLv3
 // @contributionURL https://github.com/WazeDev/Thank-The-Authors
@@ -18,7 +16,6 @@
 // @connect         greasyfork.org
 // ==/UserScript==
 
-/* global toastr */
 /* global bootstrap */
 
 (async function main() {
@@ -132,26 +129,6 @@
 
     async function init() {
         userName = sdk.State.getUserInfo().userName;
-
-        $('head').append(
-            $('<link/>', {
-                rel: 'stylesheet',
-                type: 'text/css',
-                href: 'https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/toastr.min.css'
-            }),
-            $('<style type="text/css">#toast-container {position: absolute;} #toast-container > div {opacity: 0.95;} .toast-top-center {top: 30px;}</style>')
-        );
-        // await $.getScript(TOASTR_URL);
-        toastr.options = {
-            target: '#map',
-            timeOut: 9999999999,
-            positionClass: 'toast-top-right',
-            closeOnHover: false,
-            closeDuration: 0,
-            showDuration: 0,
-            closeButton: true
-            // preventDuplicates: true
-        };
 
         GM_addStyle(`
             .wecm-tooltip li {text-align: left;}
