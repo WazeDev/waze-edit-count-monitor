@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Waze Edit Count Monitor
 // @namespace       https://greasyfork.org/en/users/45389-mapomatic
-// @version         2024.10.27.000
+// @version         2024.10.28.000
 // @description     Displays your daily edit count in the WME toolbar.  Warns if you might be throttled.
 // @author          MapOMatic
 // @include         /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
@@ -72,10 +72,12 @@
             // TODO: check all editCountByType values here?
             if (!lastProfile) {
                 lastProfile = profile;
-            } else if (lastProfile.editCount !== profile.editCount
+            } else if (lastProfile.dailyEditCount[lastProfile.dailyEditCount.length - 1] !== profile.dailyEditCount[profile.dailyEditCount.length - 1]
                     || lastProfile.editCountByType.updateRequests !== profile.editCountByType.updateRequests
                     || lastProfile.editCountByType.mapProblems !== profile.editCountByType.mapProblems
-                    || lastProfile.editCountByType.placeUpdateRequests !== profile.editCountByType.placeUpdateRequests) {
+                    || lastProfile.editCountByType.placeUpdateRequests !== profile.editCountByType.placeUpdateRequests
+                    || lastProfile.editCountByType.segmentHouseNumbers !== profile.editCountByType.segmentHouseNumbers
+                    || lastProfile.totalEditCount !== profile.totalEditCount) {
                 savesWithoutIncrease = 0;
             } else {
                 savesWithoutIncrease++;
