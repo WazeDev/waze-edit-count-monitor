@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Waze Edit Count Monitor
 // @namespace       https://greasyfork.org/en/users/45389-mapomatic
-// @version         2024.10.28.002
+// @version         2024.10.28.003
 // @description     Displays your daily edit count in the WME toolbar.  Warns if you might be throttled. Extended with additional statistics including session time and map tracking.
 // @author          MapOMatic, hiwi234
 // @include         /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
@@ -192,8 +192,6 @@
             updateTimeHistoryTable();
         }
     }
-
-
 
     // Language detection and text localization
     function getLocalizedText() {
@@ -498,7 +496,87 @@
                             isSpanish ? 'Mostrar tiempo' :
                             isItalian ? 'Mostra tempo' :
                             isDutch ? 'Tijd tonen' :
-                            isFinnish ? 'Näytä aika' : 'Zeit anzeigen'
+                            isFinnish ? 'Näytä aika' : 'Zeit anzeigen',
+
+            noDataAvailable: isEnglish ? 'No data available' :
+                            isGerman ? 'Keine Daten verfügbar' :
+                            isFrench ? 'Aucune donnée disponible' :
+                            isSpanish ? 'No hay datos disponibles' :
+                            isItalian ? 'Nessun dato disponibile' :
+                            isDutch ? 'Geen gegevens beschikbaar' :
+                            isFinnish ? 'Ei tietoja saatavilla' : 'No data available',
+
+            total: isEnglish ? 'Total' :
+                  isGerman ? 'Gesamt' :
+                  isFrench ? 'Total' :
+                  isSpanish ? 'Total' :
+                  isItalian ? 'Totale' :
+                  isDutch ? 'Totaal' :
+                  isFinnish ? 'Yhteensä' : 'Total',
+
+            sessions: isEnglish ? 'Sessions' :
+                     isGerman ? 'Sessions' :
+                     isFrench ? 'Sessions' :
+                     isSpanish ? 'Sesiones' :
+                     isItalian ? 'Sessioni' :
+                     isDutch ? 'Sessies' :
+                     isFinnish ? 'Istunnot' : 'Sessions',
+
+            edited: isEnglish ? 'edited' :
+                   isGerman ? 'bearbeitet' :
+                   isFrench ? 'modifié' :
+                   isSpanish ? 'editado' :
+                   isItalian ? 'modificato' :
+                   isDutch ? 'bewerkt' :
+                   isFinnish ? 'muokattu' : 'edited',
+
+            deleteSession: isEnglish ? 'Delete session' :
+                          isGerman ? 'Session löschen' :
+                          isFrench ? 'Supprimer la session' :
+                          isSpanish ? 'Eliminar sesión' :
+                          isItalian ? 'Elimina sessione' :
+                          isDutch ? 'Sessie verwijderen' :
+                          isFinnish ? 'Poista istunto' : 'Delete session',
+
+            day: isEnglish ? 'day' :
+                isGerman ? 'Tag' :
+                isFrench ? 'jour' :
+                isSpanish ? 'día' :
+                isItalian ? 'giorno' :
+                isDutch ? 'dag' :
+                isFinnish ? 'päivä' : 'day',
+
+            daysPlural: isEnglish ? 'days' :
+                       isGerman ? 'Tage' :
+                       isFrench ? 'jours' :
+                       isSpanish ? 'días' :
+                       isItalian ? 'giorni' :
+                       isDutch ? 'dagen' :
+                       isFinnish ? 'päivää' : 'days',
+
+            hour: isEnglish ? 'hour' :
+                 isGerman ? 'Stunde' :
+                 isFrench ? 'heure' :
+                 isSpanish ? 'hora' :
+                 isItalian ? 'ora' :
+                 isDutch ? 'uur' :
+                 isFinnish ? 'tunti' : 'hour',
+
+            hoursPlural: isEnglish ? 'hours' :
+                        isGerman ? 'Stunden' :
+                        isFrench ? 'heures' :
+                        isSpanish ? 'horas' :
+                        isItalian ? 'ore' :
+                        isDutch ? 'uur' :
+                        isFinnish ? 'tuntia' : 'hours',
+
+            and: isEnglish ? 'and' :
+                isGerman ? 'und' :
+                isFrench ? 'et' :
+                isSpanish ? 'y' :
+                isItalian ? 'e' :
+                isDutch ? 'en' :
+                isFinnish ? 'ja' : 'and'
         };
     }
 
@@ -1466,6 +1544,7 @@
 
     // Zeit-Verlauf Tabelle aktualisieren
     function updateTimeHistoryTable() {
+        const texts = getLocalizedText();
         const tbody = $('#wecm-time-history-body');
         tbody.empty();
 
@@ -1476,7 +1555,7 @@
             tbody.append(`
                 <tr>
                     <td colspan="4" style="padding: 20px; text-align: center; color: #666; font-style: italic;">
-                        Keine Daten verfügbar
+                        ${texts.noDataAvailable}
                     </td>
                 </tr>
             `);
@@ -1517,7 +1596,7 @@
                             cursor: pointer;
                             font-size: 12px;
                             font-weight: bold;
-                        " title="Session löschen">×</button>
+                        " title="${texts.deleteSession}">×</button>
                     </td>
                 </tr>
             `);
@@ -1540,9 +1619,9 @@
                 font-size: 14px;
                 box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             ">
-                Gesamt: ${totalSessions} Sessions<br>
+                ${texts.total}: ${totalSessions} ${texts.sessions}<br>
                 ${totalSummary}<br>
-                <span style="color: #FF9800;">${formatDistance(totalKilometers, 2)} bearbeitet</span>
+                <span style="color: #FF9800;">${formatDistance(totalKilometers, 2)} ${texts.edited}</span>
             </div>
         `);
 
@@ -1565,6 +1644,7 @@
 
     // Detaillierte Dauer formatieren (Tage, Stunden, Minuten, Sekunden)
     function formatDurationDetailed(seconds) {
+        const texts = getLocalizedText();
         const days = Math.floor(seconds / 86400);
         const hours = Math.floor((seconds % 86400) / 3600);
         const minutes = Math.floor((seconds % 3600) / 60);
@@ -1573,10 +1653,10 @@
         let result = [];
 
         // Immer Tage anzeigen, auch wenn 0
-        result.push(`${days} ${days === 1 ? 'Tag' : 'Tage'}`);
+        result.push(`${days} ${days === 1 ? texts.day : texts.daysPlural}`);
 
         if (hours > 0) {
-            result.push(`${hours} ${hours === 1 ? 'Stunde' : 'Stunden'}`);
+            result.push(`${hours} ${hours === 1 ? texts.hour : texts.hoursPlural}`);
         }
         if (minutes > 0) {
             result.push(`${minutes} min`);
@@ -1589,10 +1669,10 @@
         // Verbinde mit "und" für das letzte Element
         if (result.length > 1) {
             const last = result.pop();
-            return result.join(', ') + ' und ' + last;
+            return result.join(', ') + ' ' + texts.and + ' ' + last;
         }
 
-        return result[0] || '0 Tage';
+        return result[0] || `0 ${texts.daysPlural}`;
     }
 
     async function init() {
